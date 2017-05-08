@@ -523,13 +523,13 @@ void Field2D::setBoundaryTo(const Field2D &f2d) {
 
 ////////////// NON-MEMBER OVERLOADED OPERATORS //////////////
 
-#define F2D_OP_F2D(op)                                     \
+#define F2D_OP_F2D(op)                                                \
   const Field2D operator op(const Field2D &lhs, const Field2D &rhs) { \
-    Field2D result;                                                 \
-    result.allocate();                                              \
-    for(auto i : result)                                            \
-      result[i] = lhs[i] op rhs[i];                                 \
-    return result;                                                  \
+    Field2D result;                                                   \
+    result.allocate();                                                \
+    for(auto &i : result)                                             \
+      result[i] = lhs[i] op rhs[i];                                   \
+    return result;                                                    \
   }
 
 F2D_OP_F2D(+);  // Field2D + Field2D
@@ -541,7 +541,7 @@ F2D_OP_F2D(/);  // Field2D / Field2D
   const Field3D operator op(const Field2D &lhs, const Field3D &rhs) { \
     Field3D result;                                                 \
     result.allocate();                                              \
-    for(auto i : result)                                            \
+    for(auto &i : result.region(RGN_ALL))                           \
       result[i] = lhs[i] op rhs[i];                                 \
     return result;                                                  \
   }
@@ -555,7 +555,7 @@ F2D_OP_F3D(/);  // Field2D / Field3D
   const Field2D operator op(const Field2D &lhs, BoutReal rhs) {     \
     Field2D result;                                                 \
     result.allocate();                                              \
-    for(auto i : result)                                            \
+    for(auto &i : result)                                           \
       result[i] = lhs[i] op rhs;                                    \
     return result;                                                  \
   }
@@ -569,7 +569,7 @@ F2D_OP_REAL(/);  // Field2D / BoutReal
   const Field2D operator op(BoutReal lhs, const Field2D &rhs) {     \
     Field2D result;                                                 \
     result.allocate();                                              \
-    for(auto i : result)                                            \
+    for(auto &i : result)                                           \
       result[i] = lhs op rhs[i];                                    \
     return result;                                                  \
   }
@@ -593,7 +593,7 @@ BoutReal min(const Field2D &f, bool allpe) {
 
   BoutReal result = f(mesh->xstart,mesh->ystart);
 
-  for(auto i : f.region(RGN_NOBNDRY))
+  for(auto &i : f.region(RGN_NOBNDRY))
     if(f[i] < result)
       result = f[i];
   
@@ -613,7 +613,7 @@ BoutReal max(const Field2D &f, bool allpe) {
 
   BoutReal result = f(mesh->xstart,mesh->ystart);
 
-  for(auto i : f.region(RGN_NOBNDRY))
+  for(auto &i : f.region(RGN_NOBNDRY))
     if(f[i] > result)
       result = f[i];
   
@@ -630,7 +630,7 @@ bool finite(const Field2D &f) {
   TRACE("finite(Field2D)");
   ASSERT0(f.isAllocated());
 
-  for(auto i : f)
+  for(auto &i : f)
     if(!::finite(f[i]))
       return false;
   
@@ -664,7 +664,7 @@ bool finite(const Field2D &f) {
     Field2D result;                                        \
     result.allocate();                                     \
     /* Loop over domain */                                 \
-    for(auto d : result) {                                 \
+    for(auto &d : result) {                                 \
       result[d] = func(f[d]);                              \
       /* If checking is set to 3 or higher, test result */ \
       ASSERT3(finite(result[d]));                          \
@@ -697,7 +697,7 @@ const Field2D copy(const Field2D &f) {
 const Field2D floor(const Field2D &var, BoutReal f) {
   Field2D result = copy(var);
 
-  for(auto d : result)
+  for(auto &d : result)
     if(result[d] < f)
       result[d] = f;
   
@@ -715,7 +715,7 @@ Field2D pow(const Field2D &lhs, const Field2D &rhs) {
   result.allocate();
 
   // Loop over domain
-  for(auto i: result) {
+  for(auto &i: result) {
     result[i] = ::pow(lhs[i], rhs[i]);
     ASSERT3(finite(result[i]));
   }
@@ -732,7 +732,7 @@ Field2D pow(const Field2D &lhs, BoutReal rhs) {
   result.allocate();
 
   // Loop over domain
-  for(auto i: result) {
+  for(auto &i: result) {
     result[i] = ::pow(lhs[i], rhs);
     ASSERT3(finite(result[i]));
   }
@@ -749,7 +749,7 @@ Field2D pow(BoutReal lhs, const Field2D &rhs) {
   result.allocate();
 
   // Loop over domain
-  for(auto i: result) {
+  for(auto &i: result) {
     result[i] = ::pow(lhs, rhs[i]);
     ASSERT3(finite(result[i]));
   }
@@ -765,7 +765,7 @@ void checkData(const Field2D &f) {
   
 #if CHECK > 2
   // Do full checks
-  for(auto i : f.region(RGN_NOBNDRY)){
+  for(auto &i : f.region(RGN_NOBNDRY)){
     if(!::finite(f[i])) {
       throw BoutException("Field2D: Operation on non-finite data at [%d][%d]\n", i.x, i.y);
     }

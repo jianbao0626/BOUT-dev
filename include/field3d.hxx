@@ -34,6 +34,7 @@ class Mesh;  // #include "bout/mesh.hxx"
 #include "bout_types.hxx"
 
 #include "bout/dataiterator.hxx"
+#include "bout/single_index_iterator.hxx"
 
 #include "bout/array.hxx"
 
@@ -129,13 +130,13 @@ class Mesh;  // #include "bout/mesh.hxx"
 
       Field3D f(0.0); // Allocate, set to zero
 
-      for( auto i : f ) {  // Loop over all points, with index i
+      for( auto &i : f ) {  // Loop over all points, with index i
         f[i] = 1.0;
       }
 
   There is also more explicit looping over regions:
 
-      for( auto i : f.region(RGN_ALL) ) {  // Loop over all points, with index i
+      for( auto &i : f.region(RGN_ALL) ) {  // Loop over all points, with index i
         f[i] = 1.0;
       }
 
@@ -272,8 +273,13 @@ class Field3D : public Field, public FieldData {
   /////////////////////////////////////////////////////////
   // Data access
   
-  const DataIterator iterator() const;
+  //const DataIterator iterator() const;
 
+  /// Iterator type over single index
+  /// This is a wrapper around an integer, and prevents
+  /// accidental indexing of Field2D by this index
+  using iterator_t = SingleIndexIterator<Field3D>;
+  
   /*!
    * These begin and end functions are used to iterate over
    * the indices of a field. Indices are used rather than
@@ -284,13 +290,33 @@ class Field3D : public Field, public FieldData {
    *
    * Field3D objects f and g can be modified by 
    * 
-   * for(auto i : f) {
+   * for(auto &i : f) {
    *   f[i] = 2.*f[i] + g[i];
    * }
    * 
    */
-  const DataIterator begin() const;
-  const DataIterator end() const;
+  const iterator_t begin() const;
+  const iterator_t end() const;
+
+  /*!
+   * Indexing by single index. This omits the translation
+   * to and from (x,y,z) index tuples, and makes
+   * optimisation of simple loops easier.
+   *
+   * @param[in] i  The single index
+   */
+  BoutReal& operator[](const iterator_t &i) {
+    return data[i.index];
+  }
+
+  /*!
+   * Const indexing by single index
+   *
+   * @param[in] i  The single index
+   */
+  const BoutReal& operator[](const iterator_t &i) const {
+    return data[i.index];
+  }
   
   /*!
    * Returns a range of indices which can be iterated over

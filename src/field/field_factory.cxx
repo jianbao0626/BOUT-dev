@@ -179,7 +179,7 @@ const Field3D FieldFactory::create3D(const string &value, Options *opt, Mesh *m,
 
   switch(loc)  {
   case CELL_XLOW: {
-    for(auto i : result) {
+    for(auto &i : result.region(RGN_ALL)) {
       BoutReal xpos = 0.5*(m->GlobalX(i.x-1) + m->GlobalX(i.x));
       result[i] = gen->generate(xpos,
                                 TWOPI*m->GlobalY(i.y),
@@ -189,7 +189,7 @@ const Field3D FieldFactory::create3D(const string &value, Options *opt, Mesh *m,
     break;
   }
   case CELL_YLOW: {
-    for(auto i : result) {
+    for(auto &i : result.region(RGN_ALL)) {
       BoutReal ypos = TWOPI*0.5*(m->GlobalY(i.y-1) + m->GlobalY(i.y));
       result[i] = gen->generate(m->GlobalX(i.x),
                                 ypos,
@@ -199,7 +199,7 @@ const Field3D FieldFactory::create3D(const string &value, Options *opt, Mesh *m,
     break;
   }
   case CELL_ZLOW: {
-    for(auto i : result) {
+    for(auto &i : result.region(RGN_ALL)) {
       result[i] = gen->generate(m->GlobalX(i.x),
                                 TWOPI*m->GlobalY(i.y),
                                 TWOPI*(((BoutReal) i.z) - 0.5) / ((BoutReal) (m->LocalNz)),  // Z
@@ -208,7 +208,7 @@ const Field3D FieldFactory::create3D(const string &value, Options *opt, Mesh *m,
     break;
   }
   default: {// CELL_CENTRE
-    for(auto i : result) {
+    for(auto &i : result.region(RGN_ALL)) {
       result[i] = gen->generate(m->GlobalX(i.x),
                                 TWOPI*m->GlobalY(i.y),
                                 TWOPI*((BoutReal) i.z) / ((BoutReal) (m->LocalNz)),  // Z
@@ -223,7 +223,7 @@ const Field3D FieldFactory::create3D(const string &value, Options *opt, Mesh *m,
   // older BOUT++ inputs. This is not a particularly "nice" solution.
   try {
     result = m->fromFieldAligned(result);
-  }catch(BoutException &e) {
+  } catch (BoutException &e) {
     // might fail if not possible to shift coordinates
     // e.g. FCI
   }
