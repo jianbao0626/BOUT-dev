@@ -69,15 +69,6 @@ private:
   }
 };
 
-// Begin/end iterators
-MeshIterator begin(Mesh* mesh) {
-  return MeshIterator(0, 0, 0);
-}
-
-MeshIterator end(Mesh* mesh) {
-  return MeshIterator(mesh->LocalNx-1, mesh->LocalNy-1, mesh->LocalNz);
-}
-
 int main(int argc, char **argv) {
   BoutInitialise(argc, argv);
 
@@ -135,61 +126,63 @@ int main(int argc, char **argv) {
   }
   Duration elapsed3 = steady_clock::now() - start3;
 
-  // DataIterator using begin(), end()
-  SteadyClock start4 = steady_clock::now();
-  for(int x=0;x<10;x++) {
-    for(DataIterator i = begin(result), rend=end(result); i != rend; ++i){
-      result(i.x,i.y,i.z) = a(i.x,i.y,i.z) + b(i.x,i.y,i.z);
-    }
-  }
-  Duration elapsed4 = steady_clock::now() - start4;
-
-  // DataIterator with done()
-  SteadyClock start5 = steady_clock::now();
-  for(int x=0;x<10;x++) {
-    for(DataIterator i = begin(result); !i.done() ; ++i){
-      result(i.x,i.y,i.z) = a(i.x,i.y,i.z) + b(i.x,i.y,i.z);
-    }
-  }
-  Duration elapsed5 = steady_clock::now() - start5;
-
-  // Range based for DataIterator with indices
+  // Range based for with single index
   SteadyClock start6 = steady_clock::now();
   for(int x=0;x<10;x++) {
-    for(auto i : result){
-      result(i.x,i.y,i.z) = a(i.x,i.y,i.z) + b(i.x,i.y,i.z);
+    for(auto &i : result){
+      result[i] = a[i] + b[i];
     }
   }
   Duration elapsed6 = steady_clock::now() - start6;
   
-  // Range based DataIterator 
+  // Range based DataIterator with auto&
   SteadyClock start9 = steady_clock::now();
   for (int x=0;x<10;++x) {
-    for (auto i : result) {
+    for (auto &i : result) {
       result[i] = a[i] + b[i];
     }
   }
   Duration elapsed9 = steady_clock::now() - start9;
 
-  // DataIterator over fields
+  // Range based DataIterator with const auto&
   SteadyClock start10 = steady_clock::now();
-  for(int x=0;x<10;x++)
-    for(DataIterator d = result.iterator(); !d.done(); d++)
-      result[d] = a[d] + b[d];
+  for (int x=0;x<10;++x) {
+    for (const auto &i : result) {
+      result[i] = a[i] + b[i];
+    }
+  }
   Duration elapsed10 = steady_clock::now() - start10;
+
+  // Range based DataIterator with auto&&
+  SteadyClock start11 = steady_clock::now();
+  for (int x=0;x<10;++x) {
+    for (auto &&i : result) {
+      result[i] = a[i] + b[i];
+    }
+  }
+  Duration elapsed11 = steady_clock::now() - start11; 
+
+  
+  // Range based DataIterator with auto
+  SteadyClock start12 = steady_clock::now();
+  for (int x=0;x<10;++x) {
+    for (auto i : result) {
+      result[i] = a[i] + b[i];
+    }
+  }
+  Duration elapsed12 = steady_clock::now() - start12; 
   
   output << "TIMING\n======\n";
   output << "C loop                     : " << elapsed1.count() << std::endl;
   output << "----- (x,y,z) indexing ----" << std::endl;
   output << "Nested loops               : " << elapsed2.count() << std::endl;
   output << "MeshIterator               : " << elapsed3.count() << std::endl;
-  output << "DataIterator (begin/end)   : " << elapsed4.count() << std::endl;
-  output << "DataIterator (begin/done)  : " << elapsed5.count() << std::endl;
-  output << "C++11 range-based for      : " << elapsed6.count() << std::endl;
   output << "------ [i] indexing -------" << std::endl;
-  output << "C++11 Range-based for      : " << elapsed9.count() << std::endl;
-  output << "DataIterator (done)        : " << elapsed10.count() << std::endl;
-
+  output << "Single index               : " << elapsed6.count() << std::endl;
+  output << "DataIterator (auto&)       : " << elapsed9.count() << std::endl;
+  output << "DataIterator (const auto&) : " << elapsed10.count() << std::endl;
+  output << "DataIterator (auto&&)      : " << elapsed11.count() << std::endl;
+  output << "DataIterator (auto)        : " << elapsed12.count() << std::endl;
   BoutFinalise();
   return 0;
 }
