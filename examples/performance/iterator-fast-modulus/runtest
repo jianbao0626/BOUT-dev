@@ -1,0 +1,53 @@
+#!/bin/bash
+
+if [[ -z $1 ]]; then
+	echo "give an argument"
+	exit 1
+fi
+
+avg() {
+    awk 'BEGIN {FS=":"}; {sum+=$3} END {print sum/NR}'
+}
+
+get_value() {
+    grep "$1" ./data/run_* | avg
+}
+
+for i in $(seq 1 50)
+do mpirun -np 1 ./iterator >/dev/null
+    mv -v ./data/BOUT.log.0 ./data/run_$i
+done
+echo -e "\a"
+
+c_loop_amp=$(get_value "C loop &")
+c_loop_mod=$(get_value "C loop %")
+nested=$(get_value "Nested loops")
+miter=$(get_value "MeshIterator")
+single_amp=$(get_value "Single index &")
+single_mod=$(get_value "Single index %")
+three=$(get_value "Three indices")
+
+norm() {
+    echo "scale=2;$1 / $c_loop_amp" | bc -l
+}
+
+c_loop_amp_norm=$(norm $c_loop_amp)
+c_loop_mod_norm=$(norm $c_loop_mod)
+nested_norm=$(norm $nested)
+miter_norm=$(norm $miter)
+single_amp_norm=$(norm $single_amp)
+single_mod_norm=$(norm $single_mod)
+three_norm=$(norm $three)
+
+echo -e "Timings
+=======" > $1
+echo -e "C loop &		: $c_loop_amp : $c_loop_amp_norm
+C loop %		: $c_loop_mod : $c_loop_mod_norm
+----- (x,y,z) indexing ----
+Nested 			: $nested : $nested_norm
+MeshIterator 		: $miter : $miter_norm
+------ [i] indexing -------
+Single index &	 	: $single_amp : $single_amp_norm
+Single index %	 	: $single_mod : $single_mod_norm
+Three indices		: $three : $three_norm" >> $1
+

@@ -77,6 +77,7 @@ Field2D::Field2D(BoutReal val) : fieldmesh(nullptr), deriv(nullptr) {
   fieldmesh = mesh;
   nx = fieldmesh->LocalNx;
   ny = fieldmesh->LocalNy;
+  nz = fieldmesh->LocalNz;
   
   *this = val;
 }

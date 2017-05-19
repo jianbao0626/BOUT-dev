@@ -38,6 +38,7 @@ class Field3D; //#include "field3d.hxx"
 #include "stencils.hxx"
 
 #include "bout/dataiterator.hxx"
+#include "bout/single_index_iterator.hxx"
 
 #include "bout/deprecated.hxx"
 
@@ -207,6 +208,14 @@ class Field2D : public Field, public FieldData {
   const BoutReal& operator()(int jx, int jy, int UNUSED(jz)) const {
     return operator()(jx, jy);
   }
+
+  const BoutReal& operator()(const SingleIndexIterator<Field3D> &i) {
+    return data[i.index%nz];
+  }
+
+  const BoutReal& operator[](const SingleIndexIterator<Field3D> &i) {
+    return data[i.index&(nz-1)];
+  }
   
   Field2D & operator+=(const Field2D &rhs); ///< In-place addition. Copy-on-write used if data is shared
   Field2D & operator+=(BoutReal rhs);       ///< In-place addition. Copy-on-write used if data is shared
@@ -267,7 +276,7 @@ class Field2D : public Field, public FieldData {
   
  private:
   Mesh *fieldmesh; ///< The mesh over which the field is defined
-  int nx, ny;      ///< Array sizes (from fieldmesh). These are valid only if fieldmesh is not null
+  int nx, ny, nz;      ///< Array sizes (from fieldmesh). These are valid only if fieldmesh is not null
   
   /// Internal data array. Handles allocation/freeing of memory
   Array<BoutReal> data;
