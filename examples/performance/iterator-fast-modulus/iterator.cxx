@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
   }
   Duration elapsed4 = steady_clock::now() - start4;
 
-  // Range based for with single index
+  // Single index, accessed with &
   SteadyClock start7 = steady_clock::now();
   for(int x=0;x<10;x++) {
 #pragma GCC ivdep
@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
   }
   Duration elapsed7 = steady_clock::now() - start7;
 
-  // Range based DataIterator 
+  // Single index, accessed with %
   SteadyClock start8 = steady_clock::now();
   for (int x=0;x<10;++x) {
 #pragma GCC ivdep
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
   SteadyClock start9 = steady_clock::now();
   for (int x=0;x<10;++x) {
 #pragma GCC ivdep
-    for (auto &i : result) {
+    for (auto &i : result.region(RGN_ALL)) {
       result[i] = a[i] + b[i];
     }
   }
