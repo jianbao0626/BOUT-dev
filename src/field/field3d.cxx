@@ -237,13 +237,29 @@ CELL_LOC Field3D::getLocation() const {
  *                         OPERATORS 
  ***************************************************************/
 
-/*
+
 const DataIterator Field3D::iterator() const {
   return DataIterator(0, nx-1, 
                       0, ny-1,
                       0, nz-1);
 }
-*/
+
+const SingleDataIterator Field3D::Siterator() const {
+  return SingleDataIterator(0, (nx-1)*(ny-1)*(nz-1));
+}
+
+const DataIterator Field3D::beginDI() const {
+  return DataIterator(0, nx-1, 
+                      0, ny-1,
+                      0, nz-1);
+}
+
+const DataIterator Field3D::endDI() const {
+  // end() iterator should be one past the last element
+  return DataIterator(0, nx-1, 
+                      0, ny-1,
+                      0, nz-1,DI_GET_END);
+}
 
 const Field3D::iterator_t Field3D::begin() const {
   return iterator_t(0);
@@ -1119,6 +1135,7 @@ REAL_OP_F3D(+); // BoutReal + Field3D
 REAL_OP_F3D(-); // BoutReal - Field3D
 REAL_OP_F3D(*); // BoutReal * Field3D
 REAL_OP_F3D(/); // BoutReal / Field3D
+
 
 //////////////// NON-MEMBER FUNCTIONS //////////////////
 

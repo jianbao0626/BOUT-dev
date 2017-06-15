@@ -34,6 +34,7 @@ class Mesh;  // #include "bout/mesh.hxx"
 #include "bout_types.hxx"
 
 #include "bout/dataiterator.hxx"
+#include "bout/singledataiterator.hxx"
 #include "bout/single_index_iterator.hxx"
 
 #include "bout/array.hxx"
@@ -273,7 +274,8 @@ class Field3D : public Field, public FieldData {
   /////////////////////////////////////////////////////////
   // Data access
   
-  //const DataIterator iterator() const;
+  const DataIterator iterator() const;
+  const SingleDataIterator Siterator() const;
 
   /// Iterator type over single index
   /// This is a wrapper around an integer, and prevents
@@ -295,6 +297,8 @@ class Field3D : public Field, public FieldData {
    * }
    * 
    */
+  const DataIterator beginDI() const;
+  const DataIterator endDI() const;
   const iterator_t begin() const;
   const iterator_t end() const;
 
@@ -308,6 +312,9 @@ class Field3D : public Field, public FieldData {
   BoutReal& operator[](const iterator_t &i) {
     return data[i.index];
   }
+  BoutReal& operator()(const SingleDataIterator &i) {
+    return data[i.x];
+  }
 
   /*!
    * Const indexing by single index
@@ -316,6 +323,9 @@ class Field3D : public Field, public FieldData {
    */
   const BoutReal& operator[](const iterator_t &i) const {
     return data[i.index];
+  }
+  const BoutReal& operator()(const SingleDataIterator &i) const {
+    return data[i.x];
   }
   
   /*!
