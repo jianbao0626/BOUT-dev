@@ -47,7 +47,7 @@ C loop %		: $c_loop_mod : $c_loop_mod_norm
 Nested 			: $nested : $nested_norm
 MeshIterator 		: $miter : $miter_norm
 ------ [i] indexing -------
-Single index &	 	: $single_amp : $single_amp_norm
-Single index %	 	: $single_mod : $single_mod_norm
+Single index & else % 	: $single_amp : $single_amp_norm
+Single index % else & 	: $single_mod : $single_mod_norm
 Three indices		: $three : $three_norm" >> $1
 
