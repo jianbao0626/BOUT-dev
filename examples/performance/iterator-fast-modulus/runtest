@@ -23,9 +23,13 @@ c_loop_amp=$(get_value "C loop &")
 c_loop_mod=$(get_value "C loop %")
 nested=$(get_value "Nested loops")
 miter=$(get_value "MeshIterator")
+miter=$(get_value "MeshIterator")
+di_end=$(get_value "DataIterator (begin/end)")
+di_done=$(get_value "DataIterator (begin/done)")
 single_amp=$(get_value "Single index &")
 single_mod=$(get_value "Single index %")
 three=$(get_value "Three indices")
+SDI=$(get_value "SingleDataIterator")
 
 norm() {
     echo "scale=2;$1 / $c_loop_amp" | bc -l
@@ -35,9 +39,12 @@ c_loop_amp_norm=$(norm $c_loop_amp)
 c_loop_mod_norm=$(norm $c_loop_mod)
 nested_norm=$(norm $nested)
 miter_norm=$(norm $miter)
+di_end_norm=$(norm $di_end)
+di_done_norm=$(norm $di_done)
 single_amp_norm=$(norm $single_amp)
 single_mod_norm=$(norm $single_mod)
 three_norm=$(norm $three)
+SDI_norm=$(norm $SDI)
 
 echo -e "Timings
 =======" > $1
@@ -46,8 +53,11 @@ C loop %		: $c_loop_mod : $c_loop_mod_norm
 ----- (x,y,z) indexing ----
 Nested 			: $nested : $nested_norm
 MeshIterator 		: $miter : $miter_norm
+DataIterator (end)      : $di_end : $di_end_norm
+DataIterator (done)     : $di_done : $di_done_norm
 ------ [i] indexing -------
 Single index & else % 	: $single_amp : $single_amp_norm
 Single index % else & 	: $single_mod : $single_mod_norm
-Three indices		: $three : $three_norm" >> $1
+Three indices		: $three : $three_norm
+SingleDataIterator      : $SDI : $SDI_norm" >> $1
 

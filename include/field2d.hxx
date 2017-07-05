@@ -38,6 +38,7 @@ class Field3D; //#include "field3d.hxx"
 #include "stencils.hxx"
 
 #include "bout/dataiterator.hxx"
+#include "bout/singledataiterator.hxx"
 #include "bout/single_index_iterator.hxx"
 
 #include "bout/deprecated.hxx"
@@ -130,6 +131,7 @@ class Field2D : public Field, public FieldData {
 
   /// Iterator over the Field2D indices
   const DataIterator iterator() const;
+  const SingleDataIterator Siterator() const;
 
   const DataIterator begin() const;
   const DataIterator end() const;
@@ -226,6 +228,29 @@ class Field2D : public Field, public FieldData {
   const BoutReal& operator[](const SingleIndexIterator<Field3D> &i) {
 ///    if ( (nz & (nz-1)) == 0 ) {
       return data[i.index&(nz-1)];
+///    } else {
+///      return data[i.index%nz];
+///      //return data(i.x,i.y);
+///    }
+  }
+
+  const BoutReal& operator()(const SingleDataIterator &i) {
+//////    if ( (nz & (nz-1)) != 0 ) {
+///      return data[i.index%nz];
+//////    } else {
+//////      return data[i.index&(nz-1)];
+//////    }
+    if ( (nz & (nz-1)) == 0 ) {
+      return data[i.x&(nz-1)];
+    } else {
+      return data[i.x%nz];
+      //return data(i.x,i.y);
+    }
+  }
+
+  const BoutReal& operator[](const SingleDataIterator &i) {
+///    if ( (nz & (nz-1)) == 0 ) {
+      return data[i.x&(nz-1)];
 ///    } else {
 ///      return data[i.index%nz];
 ///      //return data(i.x,i.y);

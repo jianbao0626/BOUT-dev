@@ -9,6 +9,7 @@
 #include <iostream>
 #include <iterator>
 #include <time.h>
+#include <omp.h>
 
 // A simple iterator over a 3D set of indices
 class MeshIterator

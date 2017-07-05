@@ -22,6 +22,8 @@ echo -e "\a"
 nested=$(get_value "Nested loops")
 c_loop=$(get_value "C loop")
 miter=$(get_value "MeshIterator")
+diend=$(get_value "DataIterator (begin/end)")
+didone=$(get_value "DataIterator (begin/done)")
 diter_data=$(get_value "Single index")
 diter_data_done=$(get_value "Three indices")
 freach_data=$(get_value "C++11 Range-based for")
@@ -34,6 +36,8 @@ norm() {
 nested_norm=$(norm $nested)
 c_loop_norm=$(norm $c_loop)
 miter_norm=$(norm $miter)
+diend_norm=$(norm $diend)
+didone_norm=$(norm $didone)
 diter_data_norm=$(norm $diter_data)
 diter_data_done_norm=$(norm $diter_data_done)
 freach_data_norm=$(norm $freach_data)
@@ -44,6 +48,8 @@ echo -e "C loop 				: $c_loop : $c_loop_norm
 ----- (x,y,z) indexing ----
 Nested 				: $nested : $nested_norm
 MeshIterator 			: $miter : $miter_norm
+DataIterator (begin/end) 	: $diend : $diend_norm
+DataIterator (begin/done) 	: $didone : $didone_norm
 Single index		 	: $diter_data : $diter_data_norm
 Three indices			: $diter_data_done : $diter_data_done_norm
 ------ [i] indexing -------
