@@ -170,10 +170,20 @@ int main(int argc, char **argv) {
   SteadyClock start7 = steady_clock::now();
   for(int x=0;x<10;x++) {
 #pragma ivdep
-    for(auto &i : result){
+#pragma omp parallel
+{
+#pragma omp single
+  {
+    for(auto i : result){
+    //for(auto &i : result){
+#pragma omp task
+    {
       result[i] = a[i] + b[i];
     }
+    }
   }
+}
+}
   Duration elapsed7 = steady_clock::now() - start7;
 
   // Range based for with single index
@@ -220,8 +230,11 @@ int main(int argc, char **argv) {
   // DataIterator over fields
   SteadyClock start10 = steady_clock::now();
   for(int x=0;x<10;x++)
+#pragma omp parallel
+{
     for(DataIterator d = result.iterator(); !d.done(); d++)
       result[d] = a[d] + b[d];
+}
   Duration elapsed10 = steady_clock::now() - start10;
 
   
