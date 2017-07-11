@@ -111,8 +111,7 @@ int main(int argc, char **argv) {
   int len = mesh->LocalNx*mesh->LocalNy*mesh->LocalNz;
   SteadyClock start1 = steady_clock::now();
   for(int i=0;i<maxit;++i) {
-#pragma GCC ivdep
-#pragma openmp parallel for
+#pragma omp parallel for
     for(int j=0;j<len;++j) {
       rd[j] = ad[j] + bd[j%(mesh->LocalNz)];
     }
@@ -121,8 +120,7 @@ int main(int argc, char **argv) {
 
   SteadyClock start2 = steady_clock::now();
   for(int i=0;i<maxit;++i) {
-#pragma GCC ivdep
-#pragma openmp parallel for
+#pragma omp parallel for
     for(int j=0;j<len;++j) {
       rd[j] = ad[j] + bd[j&(mesh->LocalNz-1)];
     }
@@ -148,7 +146,6 @@ int main(int argc, char **argv) {
   SteadyClock start4 = steady_clock::now();
   for(int x=0;x<maxit;x++) {
 #pragma GCC ivdep
-#pragma openmp parallel for
     for(MeshIterator i; !i.isDone(); ++i){
       result(i.x,i.y,i.z) = a(i.x,i.y,i.z) + b(i.x,i.y);
     }
@@ -194,18 +191,19 @@ int main(int argc, char **argv) {
   // Single index, accessed with %
   SteadyClock start8 = steady_clock::now();
   for (int x=0;x<maxit;++x) {
-#pragma GCC ivdep
-#pragma openmp parallel for
+#pragma omp parallel
+{
     for (auto &i : result) {
       result[i] = a[i] + b(i);
     }
   }
+}
   Duration elapsed8 = steady_clock::now() - start8;
   
   // Range based DataIterator 
   SteadyClock start9 = steady_clock::now();
   for (int x=0;x<maxit;++x) {
-#pragma openmp parallel
+#pragma omp parallel
     {
     for (auto &i : result.region(RGN_ALL)) {
       result[i] = a[i] + b[i];
