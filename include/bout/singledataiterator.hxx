@@ -153,6 +153,13 @@ public:
   }
 
   /*!
+   * Resets DataIterator to the start of the range
+   */
+  void begin() {
+    x = xstart;
+  }
+
+  /*!
    * Sets DataIterator to one index past the end of the range
    */ 
   void end() {
