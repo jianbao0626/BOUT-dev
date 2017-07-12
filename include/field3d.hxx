@@ -312,6 +312,9 @@ class Field3D : public Field, public FieldData {
   BoutReal& operator[](const iterator_t &i) {
     return data[i.index];
   }
+  BoutReal& operator[](const SingleDataIterator &i) {
+    return data[i.x];
+  }
   BoutReal& operator()(const SingleDataIterator &i) {
     return data[i.x];
   }
@@ -323,6 +326,9 @@ class Field3D : public Field, public FieldData {
    */
   const BoutReal& operator[](const iterator_t &i) const {
     return data[i.index];
+  }
+  const BoutReal& operator[](const SingleDataIterator &i) const {
+    return data[i.x];
   }
   const BoutReal& operator()(const SingleDataIterator &i) const {
     return data[i.x];

@@ -1080,8 +1080,12 @@ F3D_OP_FPERP(*);
   const Field3D operator op(const Field3D &lhs, const Field3D &rhs) { \
     Field3D result;                                                   \
     result.allocate();                                                \
-    for(auto &i : lhs)                                                \
-      result[i] = lhs[i] op rhs[i];                                   \
+    _Pragma("omp parallel")                                           \
+    {                                                                 \
+      for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){ \
+        result(i) = lhs(i) op rhs(i);                                 \
+      }                                                               \
+    }                                                                 \
     result.setLocation( lhs.getLocation() );                          \
     return result;                                                    \
   }
@@ -1095,8 +1099,12 @@ F3D_OP_F3D(/);   // Field3D / Field3D
   const Field3D operator op(const Field3D &lhs, const ftype &rhs) { \
     Field3D result;                                                 \
     result.allocate();                                              \
-    for(auto i : result.region(RGN_ALL))                            \
-      result[i] = lhs[i] op rhs[i];                                 \
+    _Pragma("omp parallel")                                         \
+    {                                                               \
+      for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){  \
+        result(i) = lhs(i) op rhs(i);                               \
+      }                                                             \
+    }                                                               \
     result.setLocation( lhs.getLocation() );                        \
     return result;                                                  \
   }
@@ -1110,8 +1118,12 @@ F3D_OP_FIELD(/, Field2D);   // Field3D / Field2D
   const Field3D operator op(const Field3D &lhs, BoutReal rhs) { \
     Field3D result;                                             \
     result.allocate();                                          \
-    for(auto &i : lhs)                                          \
-      result[i] = lhs[i] op rhs;                                \
+    _Pragma("omp parallel")                                     \
+    {                                                           \
+      for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){  \
+        result(i) = lhs(i) op rhs;                              \
+      }                                                         \
+    }                                                           \
     result.setLocation( lhs.getLocation() );                    \
     return result;                                              \
   }
@@ -1125,8 +1137,12 @@ F3D_OP_REAL(/); // Field3D / BoutReal
   const Field3D operator op(BoutReal lhs, const Field3D &rhs) { \
     Field3D result;                                             \
     result.allocate();                                          \
-    for(auto &i : rhs)                                          \
-      result[i] = lhs op rhs[i];                                \
+    _Pragma("omp parallel")                                     \
+    {                                                           \
+      for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){  \
+        result(i) = lhs op rhs(i);                              \
+      }                                                         \
+    }                                                           \
     result.setLocation( rhs.getLocation() );                    \
     return result;                                              \
   }
@@ -1285,10 +1301,13 @@ BoutReal max(const Field3D &f, bool allpe) {
     Field3D result;                                        \
     result.allocate();                                     \
     /* Loop over domain */                                 \
-    for(auto &d : result) {                                \
-      result[d] = func(f[d]);                              \
-      /* If checking is set to 3 or higher, test result */ \
-      ASSERT3(finite(result[d]));                          \
+    _Pragma("omp parallel")                                \
+    {                                                      \
+      for(SingleDataIterator d = result.Siterator(); !d.done(); ++d){  \
+        result[d] = func(f[d])                                         \
+        /* If checking is set to 3 or higher, test result */           \
+        ASSERT3(finite(result[d]));                        \
+      }                                                    \
     }                                                      \
     result.setLocation(f.getLocation());                   \
     msg_stack.pop();                                       \
