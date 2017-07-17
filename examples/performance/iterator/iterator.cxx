@@ -109,17 +109,17 @@ int main(int argc, char **argv) {
 
   // Nested loops over block data
   SteadyClock start2 = steady_clock::now();
-  for(int x=0;x<10;x++) {
-    for(int i=0;i<mesh->LocalNx;++i) {
-      for(int j=0;j<mesh->LocalNy;++j) {
-#pragma ivdep
-#pragma omp parallel for
-        for(int k=0;k<mesh->LocalNz;++k) {
-          result(i,j,k) = a(i,j,k) + b(i,j,k);
-        }
-      }
-    }
-  }
+///  for(int x=0;x<10;x++) {
+///    for(int i=0;i<mesh->LocalNx;++i) {
+///      for(int j=0;j<mesh->LocalNy;++j) {
+///#pragma ivdep
+///#pragma omp parallel for
+///        for(int k=0;k<mesh->LocalNz;++k) {
+///          result(i,j,k) = a(i,j,k) + b(i,j,k);
+///        }
+///      }
+///    }
+///  }
   Duration elapsed2 = steady_clock::now() - start2;
 
   // MeshIterator over block data
@@ -168,22 +168,22 @@ int main(int argc, char **argv) {
 
   // Range based for with single index
   SteadyClock start7 = steady_clock::now();
-  for(int x=0;x<10;x++) {
-#pragma ivdep
-#pragma omp parallel
-{
-#pragma omp single
-  {
-    for(auto i : result){
-    //for(auto &i : result){
-#pragma omp task
-    {
-      result[i] = a[i] + b[i];
-    }
-    }
-  }
-}
-}
+///  for(int x=0;x<10;x++) {
+///#pragma ivdep
+///#pragma omp parallel
+///{
+///#pragma omp single
+///  {
+///    for(auto i : result){
+///    //for(auto &i : result){
+///#pragma omp task
+///    {
+///      result[i] = a[i] + b[i];
+///    }
+///    }
+///  }
+///}
+///}
   Duration elapsed7 = steady_clock::now() - start7;
 
   // Range based for with single index
