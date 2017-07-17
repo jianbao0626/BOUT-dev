@@ -1099,12 +1099,8 @@ F3D_OP_F3D(/);   // Field3D / Field3D
   const Field3D operator op(const Field3D &lhs, const ftype &rhs) { \
     Field3D result;                                                 \
     result.allocate();                                              \
-    _Pragma("omp parallel")                                         \
-    {                                                               \
-      for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){  \
-        result(i) = lhs(i) op rhs(i);                               \
-      }                                                             \
-    }                                                               \
+    for(auto i : result.region(RGN_ALL))                            \
+      result[i] = lhs[i] op rhs[i];                                 \
     result.setLocation( lhs.getLocation() );                        \
     return result;                                                  \
   }

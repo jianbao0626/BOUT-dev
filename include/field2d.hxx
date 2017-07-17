@@ -234,22 +234,28 @@ class Field2D : public Field, public FieldData {
 ///    }
   }
 
-  const BoutReal& operator()(const SingleDataIterator &i) const {
+  const BoutReal& operator()(const SingleDataIterator &i) {
+//////    if ( (nz & (nz-1)) != 0 ) {
+///      return data[i.index%nz];
+//////    } else {
+//////      return data[i.index&(nz-1)];
+//////    }
     if ( (nz & (nz-1)) == 0 ) {
       return data[i.x&(nz-1)];
     } else {
       return data[i.x%nz];
+      //return data(i.x,i.y);
     }
   }
 
-  BoutReal& operator()(const SingleDataIterator &i) {
-    if ( (nz & (nz-1)) == 0 ) {
+  const BoutReal& operator[](const SingleDataIterator &i) {
+///    if ( (nz & (nz-1)) == 0 ) {
       return data[i.x&(nz-1)];
-    } else {
-      return data[i.x%nz];
-    }
+///    } else {
+///      return data[i.index%nz];
+///      //return data(i.x,i.y);
+///    }
   }
-
   
   Field2D & operator+=(const Field2D &rhs); ///< In-place addition. Copy-on-write used if data is shared
   Field2D & operator+=(BoutReal rhs);       ///< In-place addition. Copy-on-write used if data is shared
