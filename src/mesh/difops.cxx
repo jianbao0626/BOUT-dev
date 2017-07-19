@@ -855,6 +855,7 @@ const Field3D bracket(const Field3D &f, const Field3D &g, BRACKET_METHOD method,
         BoutReal *Gxm = g_temp(jx-1, jy);
         BoutReal *Gx  = g_temp(jx,   jy);
         BoutReal *Gxp = g_temp(jx+1, jy);
+#pragma omp parallel for
         for(int jz=0;jz<ncz;jz++) {
           int jzp = (jz + 1) % ncz;
           int jzm = (jz - 1 + ncz) % ncz;
@@ -879,6 +880,38 @@ const Field3D bracket(const Field3D &f, const Field3D &g, BRACKET_METHOD method,
           result(jx, jy, jz) = (Jpp + Jpx + Jxp) / 3.;
         }
       }
+    }
+    break;
+  }
+  case BRACKET_ARAKAWA_SDI: {
+    // Arakawa scheme for perpendicular flow, implemented using SingleDataIterator to allow OpenMP parallelization
+    
+    result.allocate();
+
+#pragma omp parallel
+    {
+    for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){
+          // J++ = DDZ(f)*DDX(g) - DDX(f)*DDZ(g)
+          BoutReal Jpp = 0.25*( (f(i.zp()) - f(i.zm()))*
+                                (g(i.xp()) - g(i.xm())) -
+                                (f(i.xp()) - f(i.xm()))*
+                                (g(i.zp()) - g(i.zm())) )
+            / (metric->dx(i) * metric->dz);
+          // J+x
+          BoutReal Jpx = 0.25*( g(i.xp())*(f(i.offset(1,0,1))-f(i.offset(1,0,-1))) -
+                                g(i.xm())*(f(i.offset(-1,0,1))-f(i.offset(-1,0,-1))) -
+                                g(i.zp())*(f(i.offset(1,0,1))-f(i.offset(-1,0,1))) +
+                                g(i.zm())*(f(i.offset(1,0,-1))-f(i.offset(-1,0,-1))))
+            / (metric->dx(i) * metric->dz);
+          // Jx+
+          BoutReal Jxp = 0.25*( g(i.offset(1,0,1))*(f(i.zp())-f(i.xp())) -
+                                g(i.offset(-1,0,-1))*(f(i.xm())-f(i.zm())) -
+                                g(i.offset(-1,0,1))*(f(i.zp())-f(i.xm())) +
+                                g(i.offset(1,0,-1))*(f(i.xp())-f(i.zm())))
+            / (metric->dx(i) * metric->dz);
+          
+          result(i) = (Jpp + Jpx + Jxp) / 3.;
+        }
     }
     break;
   }

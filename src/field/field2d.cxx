@@ -153,7 +153,7 @@ const DataIterator Field2D::iterator() const {
 }
 
 const SingleDataIterator Field2D::Siterator() const {
-  return SingleDataIterator(0, (nx-1)*(ny-1));
+  return SingleDataIterator(0, nx, ny, 1);
 }
 
 const DataIterator Field2D::begin() const {

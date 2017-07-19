@@ -165,6 +165,13 @@ class Field2D : public Field, public FieldData {
     return operator()(i.x, i.y);
   }
 
+  BoutReal& operator()(const SIndices &i) {
+    return data[(i.i/nz)];
+  }
+  const BoutReal& operator()(const SIndices &i) const {
+    return data[(i.i/nz)];
+  }
+
   /*!
    * Access to the underlying data array. 
    * 
@@ -241,16 +248,16 @@ class Field2D : public Field, public FieldData {
 //////      return data[i.index&(nz-1)];
 //////    }
     if ( (nz & (nz-1)) == 0 ) {
-      return data[i.x&(nz-1)];
+      return data[i.i&(nz-1)];
     } else {
-      return data[i.x%nz];
+      return data[i.i%nz];
       //return data(i.x,i.y);
     }
   }
 
   const BoutReal& operator[](const SingleDataIterator &i) {
 ///    if ( (nz & (nz-1)) == 0 ) {
-      return data[i.x&(nz-1)];
+      return data[i.i&(nz-1)];
 ///    } else {
 ///      return data[i.index%nz];
 ///      //return data(i.x,i.y);

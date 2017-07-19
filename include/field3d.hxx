@@ -313,10 +313,10 @@ class Field3D : public Field, public FieldData {
     return data[i.index];
   }
   BoutReal& operator[](const SingleDataIterator &i) {
-    return data[i.x];
+    return data[i.i];
   }
   BoutReal& operator()(const SingleDataIterator &i) {
-    return data[i.x];
+    return data[i.i];
   }
 
   /*!
@@ -328,10 +328,10 @@ class Field3D : public Field, public FieldData {
     return data[i.index];
   }
   const BoutReal& operator[](const SingleDataIterator &i) const {
-    return data[i.x];
+    return data[i.i];
   }
   const BoutReal& operator()(const SingleDataIterator &i) const {
-    return data[i.x];
+    return data[i.i];
   }
   
   /*!
@@ -369,6 +369,12 @@ class Field3D : public Field, public FieldData {
   }
   const BoutReal& operator[](const Indices &i) const {
     return operator()(i.x, i.y, i.z);
+  }
+  BoutReal& operator()(const SIndices &i) {
+    return data[i.i];
+  }
+  const BoutReal& operator()(const SIndices &i) const {
+    return data[i.i];
   }
   
   BoutReal& operator[](bindex &bx) {

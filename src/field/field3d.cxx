@@ -245,7 +245,7 @@ const DataIterator Field3D::iterator() const {
 }
 
 const SingleDataIterator Field3D::Siterator() const {
-  return SingleDataIterator(0, (nx-1)*(ny-1)*(nz-1));
+  return SingleDataIterator(0, nx, ny, nz);
 }
 
 const DataIterator Field3D::beginDI() const {

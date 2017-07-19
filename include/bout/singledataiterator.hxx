@@ -20,7 +20,7 @@ int SDI_spread_work(int num_work, int thread, int max_thread);
  * Set of indices - DataIterator is dereferenced into these
  */
 struct SIndices {
-  int x;
+  int i;
 };
 
 #define DI_GET_END ((void *) NULL)
@@ -69,11 +69,13 @@ public:
    * If OpenMP is enabled, the index range is divided
    * between threads using the omp_init method.
    */ 
-  SingleDataIterator(int xs, int xe) :
+  SingleDataIterator(int is, int xe, int ye, int ze) : 
 #ifndef _OPENMP
-    x(xs), xstart(xs), xmin(xstart), xend(xe), xmax(xend),
+    nx(xe), ny(ye), nz(ze),
+    i(is), istart(is), imin(istart), iend(nx*ny*nz-1), imax(iend),
 #else
-    xmin(xs), xmax(xe), 
+    nx(xe), ny(ye), nz(ze),
+    imin(is), imax(nx*ny*nz-1), 
 #endif
     isEnd(false)
   {
@@ -86,11 +88,13 @@ public:
    * set end();
    * use as DataIterator(int,int,int,int,int,int,DI_GET_END);
    */
-  SingleDataIterator(int xs, int xe, void* UNUSED(dummy)) :
+  SingleDataIterator(int is, int xe, int ye, int ze, void* UNUSED(dummy)) :
 #ifndef _OPENMP
-    x(xe), xstart(xs), xmin(xstart), xend(xe), xmax(xend),
+    nx(xe), ny(ye), nz(ze),
+    i(is), istart(is), imin(istart), iend(nx*ny*nz-1), imax(iend),
 #else
-    xmin(xstart), xmax(xend), 
+    nx(xe), ny(ye), nz(ze),
+    imin(is), imax(nx*ny*nz-1), 
 #endif
     isEnd(true)
   {
@@ -104,7 +108,7 @@ public:
    * The index variables, updated during loop
    * Should make these private and provide getters?
    */
-  int x;
+  int i;
 
   /// Pre-increment operator. Use this rather than post-increment when possible
   SingleDataIterator& operator++() { next(); return *this; }
@@ -124,7 +128,7 @@ public:
     if (rhs.isEnd){
       return !this->done();
     } else {
-      return  !(x == rhs.x);
+      return  !(i == rhs.i);
     }
   }
   
@@ -146,24 +150,59 @@ public:
   }
 
   /*!
+   * Add an offset to the index for general stencils
+   */
+  const SIndices offset(int dx, int dy, int dz) const {
+    if (dz>0){
+      int zp=i%nz;
+      for (int j=0;j<dz;++j)
+        zp=(zp == nz-1 ? 0 : zp+1);
+      return { i + ny*nz*dx + nz*dy + zp };
+    } else {
+      int zm=i%nz;
+      for (;dz!= 0;++dz)
+        zm = (zm == 0 ? nz-1 : zm-1);
+      return { i + ny*nz*dx + nz*dy + zm };
+    }
+  }
+  
+  /*
+   * Shortcuts for common offsets, one cell
+   * in each direction.
+   */
+  
+  /// The index one point +1 in x
+  const SIndices xp() const { return { i + ny*nz }; }
+  /// The index one point -1 in x
+  const SIndices xm() const { return { i - ny*nz }; }
+  /// The index one point +1 in y
+  const SIndices yp() const { return { i + nz }; }
+  /// The index one point -1 in y
+  const SIndices ym() const { return { i - nz }; }
+  /// The index one point +1 in z. Wraps around zend to zstart
+  const SIndices zp() const { return { (i+1)%nz == 0 ? i-nz+1 : i+1}; }
+  /// The index one point -1 in z. Wraps around zstart to zend
+  const SIndices zm() const { return { i%nz == 0 ? i+nz-1 : i-1 }; }
+
+  /*!
    * Resets DataIterator to the start of the range
    */
   void start() {
-    x = xstart;
+    i = istart;
   }
 
   /*!
    * Resets DataIterator to the start of the range
    */
   void begin() {
-    x = xstart;
+    i = istart;
   }
 
   /*!
    * Sets DataIterator to one index past the end of the range
    */ 
   void end() {
-    x = xend;
+    i = iend;
     next();
   }
 
@@ -173,9 +212,9 @@ public:
    */
   bool done() const {
 #ifndef _OPENMP
-    return (x > xend) || (x < xstart);
+    return (i > iend) || (i < istart);
 #else //_OPENMP
-    return (x > xend) || (x < xstart);
+    return (i > iend) || (i < istart);
     //return (x == xend) || x > xend || (x <= xstart)  ;
 #endif //_OPENMP
   }
@@ -183,31 +222,32 @@ public:
 private:
   SingleDataIterator(); // Disable null constructor
 
+  const int nx, ny, nz;
 #ifndef _OPENMP
-  const int xstart;
+  const int istart;
 #else
-  int xstart;
+  int istart;
 #endif
 
-  int xmin;
+  int imin;
 
 #ifndef _OPENMP
-  const int xend;
+  const int iend;
 #else
-  int xend;
+  int iend;
 #endif
 
-  int xmax;
+  int imax;
 
   const bool isEnd;
   /// Advance to the next index
   void next() {
-    ++x;
+    ++i;
   }
 
   /// Rewind to the previous index
   void prev() {
-    --x;
+    --i;
   }
 };
 
@@ -246,18 +286,22 @@ private:
  * boundary/guard cells. 
  */
 struct SIndexRange {
-  int xstart, xend;
+  int istart, nx, ny, nz;
+  int iend = nx*ny*nz-1;
   
   const SingleDataIterator begin() const {
-    return SingleDataIterator(xstart, xend);
+    return SingleDataIterator(istart, nx, ny, nz);
   }
   const SingleDataIterator end() const {
-    return SingleDataIterator(xstart, xend, DI_GET_END);
+    return SingleDataIterator(istart, nx, ny, nz, DI_GET_END);
   }
 };
 
 #ifdef _OPENMP
 inline int SDI_spread_work(int work,int cp,int np){
+  // Spread work between threads. If number of points do not
+  // spread evenly between threads, put the remaining "rest"
+  // points on the threads 0 ... rest-1.
   int pp=work/np;
   int rest=work%np;
   int result=pp*cp;
@@ -273,7 +317,7 @@ inline void SingleDataIterator::omp_init(bool end){
   // In the case of OPENMP we need to calculate the range
   int threads=omp_get_num_threads();
   if (threads > 1){
-    int work  = (xmax-xmin+1);
+    int work  = (imax-imin+1);
     int current_thread = omp_get_thread_num();
     int begin = SDI_spread_work(work,current_thread,threads);
     int end   = SDI_spread_work(work,current_thread+1,threads);
@@ -283,16 +327,16 @@ inline void SingleDataIterator::omp_init(bool end){
     //output << "begin" << begin << "\n";
     //output << "end" << end << "\n";
     --end;
-    xend   = end;
-    xstart = begin;
+    iend   = end;
+    istart = begin;
   } else {
-    xstart = xmin;
-    xend   = xmax;
+    istart = imin;
+    iend   = imax;
   }
   if (!end){
-    x=xstart;
+    i=istart;
   } else {
-    x=xend;
+    i=iend;
   }
 };
 #endif
