@@ -21,6 +21,7 @@ int SDI_spread_work(int num_work, int thread, int max_thread);
  */
 struct SIndices {
   int i;
+  int nx, ny, nz;
 };
 
 #define DI_GET_END ((void *) NULL)
@@ -109,6 +110,7 @@ public:
    * Should make these private and provide getters?
    */
   int i;
+  const int nx, ny, nz;
 
   /// Pre-increment operator. Use this rather than post-increment when possible
   SingleDataIterator& operator++() { next(); return *this; }
@@ -222,7 +224,7 @@ public:
 private:
   SingleDataIterator(); // Disable null constructor
 
-  const int nx, ny, nz;
+  //const int nx, ny, nz;
 #ifndef _OPENMP
   const int istart;
 #else

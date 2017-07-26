@@ -693,6 +693,40 @@ const Field3D bracket(const Field3D &f, const Field2D &g, BRACKET_METHOD method,
     
     break;
   }
+  case BRACKET_ARAKAWA_SDI: {
+    // Arakawa scheme for perpendicular flow, implemented using SingleDataIterator to allow OpenMP parallelization
+    
+    result.allocate();
+
+#pragma omp parallel
+    {
+    for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){
+          // J++ = DDZ(f)*DDX(g) - DDX(f)*DDZ(g)
+	  //output << g(i.zp()) ; //<< " " << g(i.zm()) ; // << " " << g(i) << "\n";
+	  output << "anything!" ; //g(i) ; //<< " " << g(i.zm()) ; // << " " << g(i) << "\n";
+	  output << g(i.xp()) ; //<< " " << g(i.zm()) ; // << " " << g(i) << "\n";
+          BoutReal Jpp = ( (f(i.zp()) - f(i.zm()))*
+                                (g(i.xp()) - g(i.xm())) ) ;
+	                       // - (f(i.xp()) - f(i.xm()))*(g(i.zp()) - g(i.zm())) ) ; // this line is zero
+	  output << "anything!" ; //g(i) ; //<< " " << g(i.zm()) ; // << " " << g(i) << "\n";
+          // J+x
+          BoutReal Jpx = ( g(i.xp())*(f(i.offset(1,0,1))-f(i.offset(1,0,-1))) -
+                                g(i.xm())*(f(i.offset(-1,0,1))-f(i.offset(-1,0,-1))) -
+                                g(i.zp())*(f(i.offset(1,0,1))-f(i.offset(-1,0,1))) +
+                                g(i.zm())*(f(i.offset(1,0,-1))-f(i.offset(-1,0,-1)))) ;
+
+          // Jx+
+          BoutReal Jxp = ( g(i.offset(1,0,1))*(f(i.zp())-f(i.xp())) -
+                                g(i.offset(-1,0,-1))*(f(i.xm())-f(i.zm())) -
+                                g(i.offset(-1,0,1))*(f(i.zp())-f(i.xm())) +
+                                g(i.offset(1,0,-1))*(f(i.xp())-f(i.zm()))) ;
+          
+          //result(i) = 0.25 * (Jpp + Jpx + Jxp) / ( 3.0 * metric->dx(i) * metric->dz);
+          result(i) = 0.25 * (Jpp + Jpx + Jxp) / ( 3.0 * metric->dx[i.i/i.nz] * metric->dz);
+        }
+    }
+    break;
+  }
   case BRACKET_SIMPLE: {
     // Use a subset of terms for comparison to BOUT-06
     result = VDDX(DDZ(f), g);
@@ -878,6 +912,8 @@ const Field3D bracket(const Field3D &f, const Field3D &g, BRACKET_METHOD method,
             / (meshdx * metric->dz);
 			  
           result(jx, jy, jz) = (Jpp + Jpx + Jxp) / 3.;
+
+///	  output << jx << " " << jy << " " << jz << " " << meshdx << "\n";
         }
       }
     }
@@ -892,25 +928,24 @@ const Field3D bracket(const Field3D &f, const Field3D &g, BRACKET_METHOD method,
     {
     for(SingleDataIterator i = result.Siterator(); !i.done(); ++i){
           // J++ = DDZ(f)*DDX(g) - DDX(f)*DDZ(g)
-          BoutReal Jpp = 0.25*( (f(i.zp()) - f(i.zm()))*
+          BoutReal Jpp = ( (f(i.zp()) - f(i.zm()))*
                                 (g(i.xp()) - g(i.xm())) -
                                 (f(i.xp()) - f(i.xm()))*
-                                (g(i.zp()) - g(i.zm())) )
-            / (metric->dx(i) * metric->dz);
+                                (g(i.zp()) - g(i.zm())) ) ;
           // J+x
-          BoutReal Jpx = 0.25*( g(i.xp())*(f(i.offset(1,0,1))-f(i.offset(1,0,-1))) -
+          BoutReal Jpx = ( g(i.xp())*(f(i.offset(1,0,1))-f(i.offset(1,0,-1))) -
                                 g(i.xm())*(f(i.offset(-1,0,1))-f(i.offset(-1,0,-1))) -
                                 g(i.zp())*(f(i.offset(1,0,1))-f(i.offset(-1,0,1))) +
-                                g(i.zm())*(f(i.offset(1,0,-1))-f(i.offset(-1,0,-1))))
-            / (metric->dx(i) * metric->dz);
+                                g(i.zm())*(f(i.offset(1,0,-1))-f(i.offset(-1,0,-1)))) ;
+
           // Jx+
-          BoutReal Jxp = 0.25*( g(i.offset(1,0,1))*(f(i.zp())-f(i.xp())) -
+          BoutReal Jxp = ( g(i.offset(1,0,1))*(f(i.zp())-f(i.xp())) -
                                 g(i.offset(-1,0,-1))*(f(i.xm())-f(i.zm())) -
                                 g(i.offset(-1,0,1))*(f(i.zp())-f(i.xm())) +
-                                g(i.offset(1,0,-1))*(f(i.xp())-f(i.zm())))
-            / (metric->dx(i) * metric->dz);
+                                g(i.offset(1,0,-1))*(f(i.xp())-f(i.zm()))) ;
           
-          result(i) = (Jpp + Jpx + Jxp) / 3.;
+          //result(i) = 0.25 * (Jpp + Jpx + Jxp) / ( 3.0 * metric->dx(i) * metric->dz);
+          result(i) = 0.25 * (Jpp + Jpx + Jxp) / ( 3.0 * metric->dx[i.i/i.nz] * metric->dz);
         }
     }
     break;

@@ -166,10 +166,10 @@ class Field2D : public Field, public FieldData {
   }
 
   BoutReal& operator()(const SIndices &i) {
-    return data[(i.i/nz)];
+    return data[(i.i/i.nz)];
   }
   const BoutReal& operator()(const SIndices &i) const {
-    return data[(i.i/nz)];
+    return data[(i.i/i.nz)];
   }
 
   /*!
@@ -241,7 +241,21 @@ class Field2D : public Field, public FieldData {
 ///    }
   }
 
-  const BoutReal& operator()(const SingleDataIterator &i) {
+  BoutReal& operator()(const SingleDataIterator &i) {
+//////    if ( (nz & (nz-1)) != 0 ) {
+///      return data[i.index%nz];
+//////    } else {
+//////      return data[i.index&(nz-1)];
+//////    }
+    if ( (nz & (nz-1)) == 0 ) {
+      return data[i.i&(nz-1)];
+    } else {
+      return data[i.i%nz];
+      //return data(i.x,i.y);
+    }
+  }
+
+  const BoutReal& operator()(const SingleDataIterator &i) const {
 //////    if ( (nz & (nz-1)) != 0 ) {
 ///      return data[i.index%nz];
 //////    } else {
