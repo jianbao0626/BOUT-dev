@@ -1300,7 +1300,7 @@ BoutReal max(const Field3D &f, bool allpe) {
     _Pragma("omp parallel")                                \
     {                                                      \
       for(SingleDataIterator d = result.Siterator(); !d.done(); ++d){  \
-        result[d] = func(f[d])                                         \
+        result[d] = func(f[d]);                                         \
         /* If checking is set to 3 or higher, test result */           \
         ASSERT3(finite(result[d]));                        \
       }                                                    \
