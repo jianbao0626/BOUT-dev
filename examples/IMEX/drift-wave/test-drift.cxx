@@ -35,8 +35,8 @@ protected:
     mesh->communicate(phi, Vort, Ne);
     
     // Linear advection
-    ddt(Ne) = -bracket(phi, Ne0, BRACKET_ARAKAWA);
-    //ddt(Ne) = -bracket(phi, Ne0, BRACKET_ARAKAWA_SDI);
+    //ddt(Ne) = -bracket(phi, Ne0, BRACKET_ARAKAWA);
+    ddt(Ne) = -bracket(phi, Ne0, BRACKET_ARAKAWA_SDI);
     
     // Non-linear advection of density and vorticity
     //ddt(Ne) -= bracket(phi, Ne, BRACKET_ARAKAWA);

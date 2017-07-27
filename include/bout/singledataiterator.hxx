@@ -21,7 +21,9 @@ int SDI_spread_work(int num_work, int thread, int max_thread);
  */
 struct SIndices {
   int i;
-  int nx, ny, nz;
+  int nx;
+  int ny;
+  int nz;
 };
 
 #define DI_GET_END ((void *) NULL)
@@ -159,12 +161,12 @@ public:
       int zp=i%nz;
       for (int j=0;j<dz;++j)
         zp=(zp == nz-1 ? 0 : zp+1);
-      return { i + ny*nz*dx + nz*dy + zp };
+      return { i + ny*nz*dx + nz*dy + zp , nx, ny, nz };
     } else {
       int zm=i%nz;
       for (;dz!= 0;++dz)
         zm = (zm == 0 ? nz-1 : zm-1);
-      return { i + ny*nz*dx + nz*dy + zm };
+      return { i + ny*nz*dx + nz*dy + zm , nx, ny, nz};
     }
   }
   
@@ -174,17 +176,17 @@ public:
    */
   
   /// The index one point +1 in x
-  const SIndices xp() const { return { i + ny*nz }; }
+  const SIndices xp() const { return { i + ny*nz , nx, ny, nz}; }
   /// The index one point -1 in x
-  const SIndices xm() const { return { i - ny*nz }; }
+  const SIndices xm() const { return { i - ny*nz , nx, ny, nz}; }
   /// The index one point +1 in y
-  const SIndices yp() const { return { i + nz }; }
+  const SIndices yp() const { return { i + nz , nx, ny, nz}; }
   /// The index one point -1 in y
-  const SIndices ym() const { return { i - nz }; }
+  const SIndices ym() const { return { i - nz , nx, ny, nz}; }
   /// The index one point +1 in z. Wraps around zend to zstart
-  const SIndices zp() const { return { (i+1)%nz == 0 ? i-nz+1 : i+1}; }
+  const SIndices zp() const { return { (i+1)%nz == 0 ? i-nz+1 : i+1 , nx, ny, nz}; }
   /// The index one point -1 in z. Wraps around zstart to zend
-  const SIndices zm() const { return { i%nz == 0 ? i+nz-1 : i-1 }; }
+  const SIndices zm() const { return { i%nz == 0 ? i+nz-1 : i-1 , nx, ny, nz }; }
 
   /*!
    * Resets DataIterator to the start of the range
