@@ -867,12 +867,8 @@ F3D_OP_FPERP(*);
   const Field3D operator op(const Field3D &lhs, const ftype &rhs) { \
     Field3D result;                                                 \
     result.allocate();                                              \
-    _Pragma("omp parallel")                                         \
-    {                                                               \
-    for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ \
-      result(i) = lhs(i) op rhs(i);                                 \
-    }                                                               \
-    }                                                               \
+    for(const auto& i : lhs)                                        \
+      result[i] = lhs[i] op rhs[i];                                 \
     result.setLocation( lhs.getLocation() );                        \
     return result;                                                  \
   }
@@ -891,12 +887,8 @@ F3D_OP_FIELD(/, Field2D);   // Field3D / Field2D
   const Field3D operator op(const Field3D &lhs, BoutReal rhs) { \
     Field3D result;                                             \
     result.allocate();                                          \
-    _Pragma("omp parallel")                                     \
-    {                                                           \
-      for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){  \
-        result(i) = lhs(i) op rhs;                              \
-      }                                                         \
-    }                                                           \
+    for(const auto& i : lhs)                                    \
+      result[i] = lhs[i] op rhs;                                \
     result.setLocation( lhs.getLocation() );                    \
     return result;                                              \
   }
