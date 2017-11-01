@@ -270,6 +270,13 @@ public:
     ptr = other.ptr;
     other.ptr = tmp_ptr;
   }
+
+#ifdef _OPENMP
+  /// Initialises memory stores 
+  static void initOpenMP(int nthreads) {
+    _store.resize(nthreads);
+  }
+#endif
   
 private:
 
@@ -302,8 +309,13 @@ private:
    */
   ArrayData* ptr;
 
+#ifndef _OPENMP
+  
   /*!
    * This maps from array size (int) to vectors of pointers to ArrayData objects
+   *
+   * This version is for single thread, no OpenMP. 
+   * There is a separate implementation for multithreaded code
    *
    * By putting the static store inside a function it is initialised on first use,
    * and doesn't need to be separately declared for each type T
@@ -332,6 +344,48 @@ private:
     
     return store;
   }
+
+#else // _OPENMP
+  /*!
+   * Multi-threaded memory store.
+   * This uses multiple stores ("arenas"), one for each thread.
+   * This avoids some of the locking which would otherwise be
+   * needed.
+   * 
+   * NOTE: This requires that the stores are initialised and
+   * finalised externally, since static member functions may not
+   * be well behaved with OpenMP.
+   */
+  static std::map< int, std::vector<ArrayData* > > & store(bool cleanup=false) {
+
+    // Thread ID, used to index the store
+    int current_thread = omp_get_thread_num();
+    
+    if (!cleanup) {
+      return _store[current_thread];
+    }
+    
+    // Clean by deleting all data
+    for (auto &p : _store[current_thread]) {
+      auto &v = p.second;
+      for (ArrayData* a : v) {
+        delete a;
+      }
+      v.clear();
+    }
+    _store[current_thread].clear();
+    
+    return _store[current_thread];
+  }
+
+  /// Internal data store, one for each thread
+  /// These should be initialised to be large enough
+  /// to have one map per thread. Suggest using
+  /// omp_get_thread_limit. 
+  static std::vector<std::map< int, std::vector<ArrayData* > > > _store;
+  
+#endif // _OPENMP
+  
   
   /*!
    * Returns a pointer to an ArrayData object with no
@@ -339,15 +393,12 @@ private:
    */
   ArrayData* get(int len) {
     ArrayData *p;
-#pragma omp critical (store)
-    {
-      std::vector<ArrayData* >& st = store()[len];
-      if (!st.empty()) {
-        p = st.back();
-        st.pop_back();
-      } else {
-        p = new ArrayData(len);
-      }
+    std::vector<ArrayData* >& st = store()[len];
+    if (!st.empty()) {
+      p = st.back();
+      st.pop_back();
+    } else {
+      p = new ArrayData(len);
     }
     return p;
   }
@@ -361,15 +412,14 @@ private:
       return;
     
     // Reduce reference count, and if zero return to store
-#pragma omp critical (store)
-    {
-      if (!--d->refs) {
-        if (useStore()) {
-          // Put back into store
-          store()[d->len].push_back(d);
-        } else {
-          delete d;
-        }
+    --d->refs;
+    
+    if (!d->refs) {
+      if (useStore()) {
+        // Put back into store
+        store()[d->len].push_back(d);
+      } else {
+        delete d;
       }
     }
   }

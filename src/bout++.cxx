@@ -73,6 +73,18 @@ using std::list;
 
 #ifdef _OPENMP
 #include <omp.h>
+
+// Arrays need to be declared
+template<>
+std::vector<std::map< int, std::vector<Array<BoutReal>::ArrayData* > > > Array<BoutReal>::_store = {};
+template<>
+std::vector<std::map< int, std::vector<Array<dcomplex>::ArrayData* > > > Array<dcomplex>::_store = {};
+template<>
+std::vector<std::map< int, std::vector<Array<fcmplx>::ArrayData* > > > Array<fcmplx>::_store = {};
+template<>
+std::vector<std::map< int, std::vector<Array<int>::ArrayData* > > > Array<int>::_store = {};
+template<>
+std::vector<std::map< int, std::vector<Array<unsigned long>::ArrayData* > > > Array<unsigned long>::_store = {};
 #endif
 
 #include <signal.h>
@@ -353,7 +365,18 @@ int BoutInitialise(int &argc, char **&argv) {
 #endif
 
 #ifdef _OPENMP
-  output_info.write("\tOpenMP parallelisation enabled, using %d threads\n",omp_get_max_threads());
+  int nthreads = omp_get_max_threads();
+  
+  output_info.write("\tOpenMP parallelisation enabled, using %d threads\n", nthreads);
+  
+  // Initialise the Array memory stores
+  // NOTE: Each of these types must have a _store static member declared above
+  Array<BoutReal>::initOpenMP(nthreads);
+  Array<dcomplex>::initOpenMP(nthreads);
+  Array<fcmplx>::initOpenMP(nthreads);
+  Array<int>::initOpenMP(nthreads);
+  Array<unsigned long>::initOpenMP(nthreads);
+  
 #else
   output_info.write("\tOpenMP parallelisation disabled\n");
 #endif
