@@ -64,23 +64,12 @@ private:
   /* Allocation fo
    * bk   = The fourier transformed of b, where b is one of the inputs in
    *        LaplaceSerialTri::solve()
-   * bk1d = The 1d array of bk
    * xk   = The fourier transformed of x, where x the output of
    *        LaplaceSerialTri::solve()
-   * xk1d = The 1d array of xk
    */
-  dcomplex **bk, *bk1d;
-  dcomplex **xk, *xk1d;
+  dcomplex **bk;
+  dcomplex **xk;
 
-  /* Coefficents in the tridiagonal solver matrix
-   * Following the notation in "Numerical recipes"
-   * avec is the lower diagonal of the matrix
-   * bvec is the diagonal of the matrix
-   * cvec is the upper diagonal of the matrix
-   * NOTE: Do not confuse avec, bvec and cvec with the A, C, and D coefficients
-   *       above
-   */
-  dcomplex *avec, *bvec, *cvec;
 };
 
 #endif // __SERIAL_TRI_H__
