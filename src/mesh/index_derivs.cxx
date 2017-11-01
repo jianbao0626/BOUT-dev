@@ -60,6 +60,7 @@
 #include <output.hxx>
 
 #include <bout/mesh.hxx>
+#include <bout/scorepwrapper.hxx>
 
 /*******************************************************************************
  * Limiters
@@ -981,6 +982,7 @@ const Field2D Mesh::applyYdiff(const Field2D &var, Mesh::deriv_func func, CELL_L
 }
 
 const Field3D Mesh::applyYdiff(const Field3D &var, Mesh::deriv_func func, CELL_LOC loc, REGION region) {
+  SCOREP0();
   if (var.getNy() == 1){
     return 0.;
   }
@@ -1166,6 +1168,7 @@ const Field3D Mesh::applyYdiff(const Field3D &var, Mesh::deriv_func func, CELL_L
 // Z derivative
 
 const Field3D Mesh::applyZdiff(const Field3D &var, Mesh::deriv_func func, CELL_LOC loc, REGION region) {
+  SCOREP0();
   if (var.getNz()==1){
     return 0.;
   }
@@ -1333,6 +1336,7 @@ const Field2D Mesh::indexDDY(const Field2D &f) {
 ////////////// Z DERIVATIVE /////////////////
 
 const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD method, bool inc_xbndry) {
+  SCOREP0();
   Mesh::deriv_func func = fDDZ; // Set to default function
   DiffLookup *table = FirstDerivTable;
  
@@ -1460,6 +1464,7 @@ const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD meth
 }
 
 const Field2D Mesh::indexDDZ(const Field2D &f) {
+  SCOREP0();
   ASSERT1(this == f.getMesh());
   Field2D result(this);
   result = 0.0;
