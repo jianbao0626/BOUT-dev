@@ -155,10 +155,12 @@ const Vector3D DDZ(const Vector3D &v, CELL_LOC outloc, DIFF_METHOD method) {
 }
 
 const Vector3D DDZ(const Vector3D &v, DIFF_METHOD method, CELL_LOC outloc) {
+  SCOREP0();
   return DDZ(v, outloc, method);
 }
 
 const Vector2D DDZ(const Vector2D &v) {
+  SCOREP0();
   Vector2D result;
 
   result.covariant = v.covariant;

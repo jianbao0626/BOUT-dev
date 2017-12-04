@@ -42,6 +42,7 @@
 #include <msg_stack.hxx>
 #include <bout/constants.hxx>
 #include <bout/assert.hxx>
+#include <bout/scorepwrapper.hxx>
 
 /// Constructor
 Field3D::Field3D(Mesh *msh)
@@ -104,6 +105,7 @@ Field3D::Field3D(const Field2D &f)
     : Field(nullptr), background(nullptr), deriv(nullptr), yup_field(nullptr),
       ydown_field(nullptr) {
 
+  SCOREP0();
   TRACE("Field3D: Copy constructor from Field2D");
 
   location = CELL_CENTRE; // Cell centred variable by default
@@ -122,6 +124,7 @@ Field3D::Field3D(const BoutReal val)
     : Field(nullptr), background(nullptr), deriv(nullptr), yup_field(nullptr),
       ydown_field(nullptr) {
 
+  SCOREP0();
   TRACE("Field3D: Copy constructor from value");
 
   location = CELL_CENTRE; // Cell centred variable by default
@@ -137,6 +140,7 @@ Field3D::Field3D(const BoutReal val)
 }
 
 Field3D::~Field3D() {
+  SCOREP0();
   /// Delete the time derivative variable if allocated
   if(deriv != NULL) {
     // The ddt of the yup/ydown_fields point to the same place as ddt.yup_field
@@ -159,6 +163,7 @@ Field3D::~Field3D() {
 }
 
 void Field3D::allocate() {
+  SCOREP0();
   if(data.empty()) {
     if(!fieldmesh) {
       /// If no mesh, use the global
@@ -173,6 +178,7 @@ void Field3D::allocate() {
 }
 
 Field3D* Field3D::timeDeriv() {
+  SCOREP0();
   if(deriv == nullptr) {
     deriv = new Field3D(fieldmesh);
   }
@@ -180,6 +186,7 @@ Field3D* Field3D::timeDeriv() {
 }
 
 void Field3D::splitYupYdown() {
+  SCOREP0();
   TRACE("Field3D::splitYupYdown");
   
   if((yup_field != this) && (yup_field != nullptr))
@@ -191,6 +198,7 @@ void Field3D::splitYupYdown() {
 }
 
 void Field3D::mergeYupYdown() {
+  SCOREP0();
   TRACE("Field3D::mergeYupYdown");
   
   if(yup_field == this && ydown_field == this)
@@ -209,6 +217,7 @@ void Field3D::mergeYupYdown() {
 }
 
 Field3D& Field3D::ynext(int dir) {
+  SCOREP0();
   switch(dir) {
   case +1:
     return yup();
@@ -220,6 +229,7 @@ Field3D& Field3D::ynext(int dir) {
 }
 
 const Field3D& Field3D::ynext(int dir) const {
+  SCOREP0();
   switch(dir) {
   case +1:
     return yup();
@@ -231,6 +241,7 @@ const Field3D& Field3D::ynext(int dir) const {
 }
 
 void Field3D::setLocation(CELL_LOC loc) {
+  SCOREP0();
   if(loc == CELL_VSHIFT)
     throw BoutException("Field3D: CELL_VSHIFT cell location only makes sense for vectors");
   
@@ -295,6 +306,7 @@ const IndexRange Field3D::region(REGION rgn) const {
   };
 }
 const SingleDataIterator Field3D::sdi_region(REGION rgn) {
+  SCOREP0();
   switch(rgn) {
   case RGN_ALL: {
     return SingleDataIterator(0, nx-1,
@@ -333,6 +345,7 @@ const SingleDataIterator Field3D::sdi_region(REGION rgn) {
 /////////////////// ASSIGNMENT ////////////////////
 
 Field3D & Field3D::operator=(const Field3D &rhs) {
+  SCOREP0();
   /// Check for self-assignment
   if(this == &rhs)
     return(*this); // skip this assignment
@@ -354,6 +367,7 @@ Field3D & Field3D::operator=(const Field3D &rhs) {
 }
 
 Field3D & Field3D::operator=(const Field2D &rhs) {
+  SCOREP0();
   TRACE("Field3D = Field2D");
   
   ASSERT1(rhs.isAllocated());
@@ -365,8 +379,12 @@ Field3D & Field3D::operator=(const Field2D &rhs) {
   allocate();
 
   /// Copy data
-  for(const auto& i : (*this))
-    (*this)[i] = rhs[i];
+#pragma omp parallel
+{
+  for(SingleDataIterator i = (*this).sdi_region(RGN_ALL); !i.done(); ++i){ 
+    (*this)(i) = rhs(i);
+  }
+}
   
   /// Only 3D fields have locations for now
   //location = CELL_CENTRE;
@@ -375,18 +393,23 @@ Field3D & Field3D::operator=(const Field2D &rhs) {
 }
 
 void Field3D::operator=(const FieldPerp &rhs) {
+  SCOREP0();
   ASSERT1(rhs.isAllocated());
   
   /// Make sure there's a unique array to copy data into
   allocate();
 
   /// Copy data
-  for(const auto& i : rhs) {
-    (*this)[i] = rhs[i];
+#pragma omp parallel
+{
+  for(SingleDataIterator i = (*this).sdi_region(RGN_ALL); !i.done(); ++i){ 
+    (*this)(i) = rhs(i);
   }
+}
 }
 
 void Field3D::operator=(const bvalue &bv) {
+  SCOREP0();
   TRACE("Field3D = bvalue");
   
   allocate();
@@ -401,6 +424,7 @@ void Field3D::operator=(const bvalue &bv) {
 }
 
 Field3D & Field3D::operator=(const BoutReal val) {
+  SCOREP0();
   TRACE("Field3D = BoutReal");
   allocate();
 
@@ -408,8 +432,12 @@ Field3D & Field3D::operator=(const BoutReal val) {
   if(!finite(val))
     throw BoutException("Field3D: Assignment from non-finite BoutReal\n");
 #endif
-  for(const auto& i : (*this))
-    (*this)[i] = val;
+#pragma omp parallel
+{
+  for(SingleDataIterator i = (*this).sdi_region(RGN_ALL); !i.done(); ++i){ 
+    (*this)(i) = val;
+  }
+}
 
   // Only 3D fields have locations
   //location = CELL_CENTRE;
@@ -422,13 +450,18 @@ Field3D & Field3D::operator=(const BoutReal val) {
 
 #define F3D_UPDATE_FIELD(op,bop,ftype)                       \
   Field3D & Field3D::operator op(const ftype &rhs) {         \
-    TRACE("Field3D: %s %s", #op, #ftype);           \
+    SCOREP0();                                               \
+    TRACE("Field3D: %s %s", #op, #ftype);                    \
     checkData(rhs) ;                                         \
     checkData(*this);                                        \
     if(data.unique()) {                                      \
       /* This is the only reference to this data */          \
-      for(const auto& i : (*this))                                  \
-        (*this)[i] op rhs[i];                                \
+      _Pragma("omp parallel")                                \
+      {                                                      \
+      for(SingleDataIterator i = (*this).sdi_region(RGN_ALL); !i.done(); ++i){ \
+        (*this)(i) op rhs(i);                                \
+      }                                                      \
+      }                                                      \
     }else {                                                  \
       /* Shared data */                                      \
       (*this) = (*this) bop rhs;                             \
@@ -448,6 +481,7 @@ F3D_UPDATE_FIELD(/=, /, Field2D);    // operator/= Field2D
 
 #define F3D_UPDATE_REAL(op,bop)                              \
   Field3D & Field3D::operator op(BoutReal rhs) {      \
+    SCOREP0();                                               \
     TRACE("Field3D: %s Field3D", #op);              \
     if(!finite(rhs))                                         \
       throw BoutException("Field3D: %s operator passed non-finite BoutReal number", #op); \
@@ -455,8 +489,12 @@ F3D_UPDATE_FIELD(/=, /, Field2D);    // operator/= Field2D
                                                              \
     if(data.unique()) {                                      \
       /* This is the only reference to this data */          \
-      for(const auto& i : (*this))                                  \
-        (*this)[i] op rhs;                                   \
+      _Pragma("omp parallel")                                \
+      {                                                      \
+      for(SingleDataIterator i = (*this).sdi_region(RGN_ALL); !i.done(); ++i){ \
+        (*this)(i) op rhs;                                   \
+      }                                                      \
+      }                                                      \
     }else {                                                  \
       /* Need to put result in a new block */                \
       (*this) = (*this) bop rhs;                             \
@@ -474,6 +512,7 @@ F3D_UPDATE_REAL(/=,/);    // operator/= BoutReal
  ***************************************************************/
 
 void Field3D::setXStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const {
+  SCOREP0();                                               
   fval.jx = bx.jx;
   fval.jy = bx.jy;
   fval.jz = bx.jz;
@@ -507,6 +546,7 @@ void Field3D::setXStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const {
 
 void Field3D::setYStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const
 {
+  SCOREP0();                                               
   fval.jx = bx.jx;
   fval.jy = bx.jy;
   fval.jz = bx.jz;
@@ -543,6 +583,7 @@ void Field3D::setYStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const
 }
 
 void Field3D::setZStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const {
+  SCOREP0();                                               
   fval.jx = bx.jx;
   fval.jy = bx.jy;
   fval.jz = bx.jz;
@@ -578,10 +619,12 @@ void Field3D::setZStencil(stencil &fval, const bindex &bx, CELL_LOC loc) const {
 ///////////////////// BOUNDARY CONDITIONS //////////////////
 
 void Field3D::setBackground(const Field2D &f2d) {
+  SCOREP0();                                               
   background = &f2d;
 }
 
 void Field3D::applyBoundary(bool init) {
+  SCOREP0();                                               
   TRACE("Field3D::applyBoundary()");
 
 #if CHECK > 0
@@ -610,6 +653,7 @@ void Field3D::applyBoundary(bool init) {
 }
 
 void Field3D::applyBoundary(BoutReal t) {
+  SCOREP0();                                               
   TRACE("Field3D::applyBoundary()");
   
 #if CHECK > 0
@@ -634,6 +678,7 @@ void Field3D::applyBoundary(BoutReal t) {
 }
 
 void Field3D::applyBoundary(const string &condition) {
+  SCOREP0();                                               
   TRACE("Field3D::applyBoundary(condition)");
   
   ASSERT1(isAllocated());
@@ -661,6 +706,7 @@ void Field3D::applyBoundary(const string &condition) {
 }
 
 void Field3D::applyBoundary(const string &region, const string &condition) {
+  SCOREP0();                                               
   ASSERT1(isAllocated());
 
   /// Get the boundary factory (singleton)
@@ -680,6 +726,7 @@ void Field3D::applyBoundary(const string &region, const string &condition) {
 }
 
 void Field3D::applyTDerivBoundary() {
+  SCOREP0();                                               
   TRACE("Field3D::applyTDerivBoundary()");
   
   ASSERT1(isAllocated());
@@ -697,6 +744,7 @@ void Field3D::applyTDerivBoundary() {
 }
 
 void Field3D::setBoundaryTo(const Field3D &f3d) {
+  SCOREP0();                                               
   TRACE("Field3D::setBoundary(const Field3D&)");
   
   allocate(); // Make sure data allocated
@@ -719,6 +767,7 @@ void Field3D::setBoundaryTo(const Field3D &f3d) {
 
 void Field3D::applyParallelBoundary() {
 
+  SCOREP0();                                               
   TRACE("Field3D::applyParallelBoundary()");
 
   ASSERT1(isAllocated());
@@ -738,6 +787,7 @@ void Field3D::applyParallelBoundary() {
 
 void Field3D::applyParallelBoundary(BoutReal t) {
 
+  SCOREP0();                                               
   TRACE("Field3D::applyParallelBoundary(t)");
 
   ASSERT1(isAllocated());
@@ -757,6 +807,7 @@ void Field3D::applyParallelBoundary(BoutReal t) {
 
 void Field3D::applyParallelBoundary(const string &condition) {
 
+  SCOREP0();                                               
   TRACE("Field3D::applyParallelBoundary(condition)");
 
   ASSERT1(isAllocated());
@@ -781,6 +832,7 @@ void Field3D::applyParallelBoundary(const string &condition) {
 
 void Field3D::applyParallelBoundary(const string &region, const string &condition) {
 
+  SCOREP0();                                               
   TRACE("Field3D::applyParallelBoundary(region, condition)");
 
   ASSERT1(isAllocated());
@@ -808,6 +860,7 @@ void Field3D::applyParallelBoundary(const string &region, const string &conditio
 
 void Field3D::applyParallelBoundary(const string &region, const string &condition, Field3D *f) {
 
+  SCOREP0();                                               
   TRACE("Field3D::applyParallelBoundary(region, condition, f)");
 
   ASSERT1(isAllocated());
@@ -845,15 +898,17 @@ void Field3D::applyParallelBoundary(const string &region, const string &conditio
 
 
 const Field3D operator-(const Field3D &f) {
+  SCOREP0();                                               
   return -1.0*f;
 }
 
 #define F3D_OP_FPERP(op)                     	                          \
   const FieldPerp operator op(const Field3D &lhs, const FieldPerp &rhs) { \
+    SCOREP0();                                               \
     FieldPerp result;                                                     \
     result.allocate();                                                    \
     result.setIndex(rhs.getIndex());                                      \
-    for(const auto& i : rhs)                                                     \
+    for(const auto& i : rhs)                                              \
       result[i] = lhs[i] op rhs[i];                                       \
     return result;                                                        \
   }
@@ -865,10 +920,15 @@ F3D_OP_FPERP(*);
 
 #define F3D_OP_FIELD(op, ftype)                                     \
   const Field3D operator op(const Field3D &lhs, const ftype &rhs) { \
+    SCOREP0();                                               \
     Field3D result;                                                 \
     result.allocate();                                              \
-    for(const auto& i : lhs)                                        \
-      result[i] = lhs[i] op rhs[i];                                 \
+    _Pragma("omp parallel")                                         \
+    {                                                               \
+    for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ \
+      result(i) = lhs(i) op rhs(i);                                 \
+    }                                                               \
+    }                                                               \
     result.setLocation( lhs.getLocation() );                        \
     return result;                                                  \
   }
@@ -885,10 +945,15 @@ F3D_OP_FIELD(/, Field2D);   // Field3D / Field2D
 
 #define F3D_OP_REAL(op)                                         \
   const Field3D operator op(const Field3D &lhs, BoutReal rhs) { \
+    SCOREP0();                                               \
     Field3D result;                                             \
     result.allocate();                                          \
-    for(const auto& i : lhs)                                    \
-      result[i] = lhs[i] op rhs;                                \
+    _Pragma("omp parallel")                                     \
+    {                                                           \
+    for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ \
+      result(i) = lhs(i) op rhs;                                \
+    }                                                           \
+    }                                                           \
     result.setLocation( lhs.getLocation() );                    \
     return result;                                              \
   }
@@ -900,10 +965,15 @@ F3D_OP_REAL(/); // Field3D / BoutReal
 
 #define REAL_OP_F3D(op)                                         \
   const Field3D operator op(BoutReal lhs, const Field3D &rhs) { \
+    SCOREP0();                                               \
     Field3D result;                                             \
     result.allocate();                                          \
-    for(const auto& i : rhs)                                           \
-      result[i] = lhs op rhs[i];                                \
+    _Pragma("omp parallel")                                     \
+    {                                                           \
+    for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ \
+      result(i) = lhs op rhs(i);                                \
+    }                                                           \
+    }                                                           \
     result.setLocation( rhs.getLocation() );                    \
     return result;                                              \
   }
@@ -916,6 +986,7 @@ REAL_OP_F3D(/); // BoutReal / Field3D
 //////////////// NON-MEMBER FUNCTIONS //////////////////
 
 Field3D pow(const Field3D &lhs, const Field3D &rhs) {
+    SCOREP0();                                               
   TRACE("pow(Field3D, Field3D)");
 
   if(mesh->StaggerGrids && (lhs.getLocation() != rhs.getLocation())) {
@@ -927,10 +998,13 @@ Field3D pow(const Field3D &lhs, const Field3D &rhs) {
   result.allocate();
 
   // Iterate over indices
-  for(const auto& i : result) {
-    result[i] = ::pow(lhs[i], rhs[i]);
-    ASSERT2( ::finite( result[i] ) );
+#pragma omp parallel
+{
+  for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ 
+    result(i) = ::pow(lhs(i), rhs(i));
+    ASSERT2( ::finite( result(i) ) );
   }
+}
   
   result.setLocation( lhs.getLocation() );
   
@@ -938,6 +1012,7 @@ Field3D pow(const Field3D &lhs, const Field3D &rhs) {
 }
 
 Field3D pow(const Field3D &lhs, const Field2D &rhs) {
+    SCOREP0();                                               
   TRACE("pow(Field3D, Field2D)");
   // Check if the inputs are allocated
   ASSERT1(lhs.isAllocated());
@@ -948,10 +1023,13 @@ Field3D pow(const Field3D &lhs, const Field2D &rhs) {
   result.allocate();
 
   // Iterate over indices
-  for(const auto& i : result) {
-    result[i] = ::pow(lhs[i], rhs[i]);
-    ASSERT3( ::finite( result[i] ) );
+#pragma omp parallel
+{
+  for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ 
+    result(i) = ::pow(lhs(i), rhs(i));
+    ASSERT3( ::finite( result(i) ) );
   }
+}
 
   result.setLocation( lhs.getLocation() );
   
@@ -959,38 +1037,47 @@ Field3D pow(const Field3D &lhs, const Field2D &rhs) {
 }
 
 Field3D pow(const Field3D &lhs, const FieldPerp &rhs) {
+    SCOREP0();                                               
   TRACE("pow(Field3D, FieldPerp)");
   
   Field3D result;
   result.allocate();
 
   // Iterate over indices
-  for(const auto& i : result) {
-    result[i] = ::pow(lhs[i], rhs[i]);
-    ASSERT2( ::finite( result[i] ) );
+#pragma omp parallel
+{
+  for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ 
+    result(i) = ::pow(lhs(i), rhs(i));
+    ASSERT2( ::finite( result(i) ) );
   }
+}
 
   result.setLocation( lhs.getLocation() );
   return result;
 }
 
 Field3D pow(const Field3D &lhs, BoutReal rhs) {
+    SCOREP0();                                               
   TRACE("pow(Field3D, BoutReal)");
   // Check if the inputs are allocated
   ASSERT1(lhs.isAllocated());
 
   Field3D result;
   result.allocate();
-  for(const auto& i : result){
-    result[i] = ::pow(lhs[i], rhs);
-    ASSERT3(finite(result[i]));
+#pragma omp parallel
+{
+  for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ 
+    result(i) = ::pow(lhs(i), rhs);
+    ASSERT3( ::finite( result(i) ) );
   }
+}
   
   result.setLocation( lhs.getLocation() );
   return result;
 }
 
 Field3D pow(BoutReal lhs, const Field3D &rhs) {
+    SCOREP0();                                               
   TRACE("pow(lhs, Field3D)");
   // Check if the inputs are allocated
   ASSERT1(rhs.isAllocated());
@@ -999,16 +1086,20 @@ Field3D pow(BoutReal lhs, const Field3D &rhs) {
   Field3D result;
   result.allocate();
 
-  for(const auto& i : result){
-    result[i] = ::pow(lhs, rhs[i]);
-    ASSERT3(finite(result[i]));
+#pragma omp parallel
+{
+  for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ 
+    result(i) = ::pow(lhs, rhs(i));
+    ASSERT3( ::finite( result(i) ) );
   }
+}
   
   result.setLocation( rhs.getLocation() );
   return result;
 }
 
 BoutReal min(const Field3D &f, bool allpe) {
+    SCOREP0();                                               
   TRACE("Field3D::Min() %s",allpe? "over all PEs" : "");
 
   ASSERT2(f.isAllocated());
@@ -1029,6 +1120,7 @@ BoutReal min(const Field3D &f, bool allpe) {
 }
 
 BoutReal max(const Field3D &f, bool allpe) {
+    SCOREP0();                                               
   TRACE("Field3D::Max() %s",allpe? "over all PEs" : "");
 
   ASSERT2(f.isAllocated());
@@ -1053,6 +1145,7 @@ BoutReal max(const Field3D &f, bool allpe) {
 
 #define F3D_FUNC(name, func)                               \
   const Field3D name(const Field3D &f) {                   \
+    SCOREP0();                                             \
     TRACE(#name "(Field3D)");                     \
     /* Check if the input is allocated */                  \
     ASSERT1(f.isAllocated());                              \
@@ -1060,10 +1153,12 @@ BoutReal max(const Field3D &f, bool allpe) {
     Field3D result;                                        \
     result.allocate();                                     \
     /* Loop over domain */                                 \
-    for(const auto& d : result) {                                 \
-      result[d] = func(f[d]);                              \
-      /* If checking is set to 3 or higher, test result */ \
-      ASSERT3(finite(result[d]));                          \
+    _Pragma("omp parallel")                                \
+    {                                                      \
+    for(SingleDataIterator i = result.sdi_region(RGN_ALL); !i.done(); ++i){ \
+      result(i) = func(f(i));                              \
+      ASSERT3(finite(result(i)));                          \
+    }                                                      \
     }                                                      \
     result.setLocation(f.getLocation());                   \
     return result;                                         \
@@ -1085,6 +1180,7 @@ F3D_FUNC(tanh, ::tanh);
 
 const Field3D filter(const Field3D &var, int N0) {
   TRACE("filter(Field3D, int)");
+    SCOREP0();                                             
   
   ASSERT1(var.isAllocated());
   
@@ -1122,6 +1218,7 @@ const Field3D filter(const Field3D &var, int N0) {
 
 // Fourier filter in z
 const Field3D lowPass(const Field3D &var, int zmax) {
+    SCOREP0();                                             
   TRACE("lowPass(Field3D, %d)", zmax);
 
   ASSERT1(var.isAllocated());
@@ -1159,6 +1256,7 @@ const Field3D lowPass(const Field3D &var, int zmax) {
 
 // Fourier filter in z with zmin
 const Field3D lowPass(const Field3D &var, int zmax, int zmin) {
+    SCOREP0();                                             
   TRACE("lowPass(Field3D, %d, %d)", zmax, zmin);
 
   ASSERT1(var.isAllocated());
@@ -1200,6 +1298,7 @@ const Field3D lowPass(const Field3D &var, int zmax, int zmin) {
  * Use FFT to shift by an angle in the Z direction
  */
 void shiftZ(Field3D &var, int jx, int jy, double zangle) {
+    SCOREP0();                                             
   TRACE("shiftZ");
   ASSERT1(var.isAllocated()); // Check that var has some data
   var.allocate(); // Ensure that var is unique
@@ -1223,12 +1322,14 @@ void shiftZ(Field3D &var, int jx, int jy, double zangle) {
 }
 
 void shiftZ(Field3D &var, double zangle) {
+    SCOREP0();                                             
   for(int x=0;x<mesh->LocalNx;x++) 
     for(int y=0;y<mesh->LocalNy;y++)
       shiftZ(var, x, y, zangle);
 }
 
 bool finite(const Field3D &f) {
+    SCOREP0();                                             
   TRACE("finite( Field3D )");
 
   if (!f.isAllocated()) {
@@ -1247,6 +1348,7 @@ bool finite(const Field3D &f) {
 #if CHECK > 0
 /// Check if the data is valid
 void checkData(const Field3D &f)  {
+    SCOREP0();                                             
   if(!f.isAllocated())
     throw BoutException("Field3D: Operation on empty data\n");
   
@@ -1262,12 +1364,14 @@ void checkData(const Field3D &f)  {
 #endif
 
 const Field3D copy(const Field3D &f) {
+    SCOREP0();                                             
   Field3D result = f;
   result.allocate();
   return result;
 }
 
 const Field3D floor(const Field3D &var, BoutReal f) {
+    SCOREP0();                                             
   Field3D result = copy(var);
   
   for(const auto& d : result)
@@ -1278,6 +1382,7 @@ const Field3D floor(const Field3D &var, BoutReal f) {
 }
 
 Field2D DC(const Field3D &f) {
+    SCOREP0();                                             
   TRACE("DC(Field3D)");
   
   Field2D result;

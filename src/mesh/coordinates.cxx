@@ -16,6 +16,7 @@
 #include <fft.hxx>
 
 #include <globals.hxx>
+#include <bout/scorepwrapper.hxx>
 
 Coordinates::Coordinates(Mesh *mesh) {
 
@@ -203,6 +204,16 @@ Coordinates::Coordinates(Mesh *mesh) {
       IntShiftTorsion = 0.0;
     }
   }
+
+///  // allocate memory for use in Delp2
+///  int ncz = mesh->LocalNz;
+///  static dcomplex **ft = (dcomplex **)NULL, **delft;
+///  if (ft == (dcomplex **)NULL) {
+///    // Allocate memory
+///    ft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
+///    delft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
+///  }
+
 }
 
 void Coordinates::outputVars(Datafile &file) {
@@ -639,6 +650,7 @@ const Field3D Coordinates::Grad2_par2(const Field3D &f, CELL_LOC outloc) {
 #include <invert_laplace.hxx> // Delp2 uses same coefficients as inversion code
 
 const Field2D Coordinates::Delp2(const Field2D &f) {
+  SCOREP0();
   TRACE("Coordinates::Delp2( Field2D )");
 
   Field2D result = G1 * DDX(f) + g11 * D2DX2(f);
@@ -647,6 +659,7 @@ const Field2D Coordinates::Delp2(const Field2D &f) {
 }
 
 const Field3D Coordinates::Delp2(const Field3D &f) {
+  SCOREP0();
   TRACE("Coordinates::Delp2( Field3D )");
   
   ASSERT2(mesh->xstart > 0); // Need at least one guard cell
@@ -667,11 +680,12 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
   for (int jy = 0; jy < mesh->LocalNy; jy++) {
 
     // Take forward FFT
-
+    #pragma omp parallel for
     for (int jx = 0; jx < mesh->LocalNx; jx++)
       rfft(&f(jx, jy, 0), ncz, ft[jx]);
 
     // Loop over kz
+    #pragma omp parallel for
     for (int jz = 0; jz <= ncz / 2; jz++) {
       dcomplex a, b, c;
 
@@ -686,12 +700,14 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     }
 
     // Reverse FFT
+    #pragma omp parallel for
     for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
 
       irfft(delft[jx], ncz, &result(jx, jy, 0));
     }
 
     // Boundaries
+    #pragma omp parallel for
     for (int jz = 0; jz < ncz; jz++) {
       for (int jx = 0; jx<mesh->xstart; jx++) {
 	result(jx, jy, jz) = 0.0;
@@ -702,6 +718,56 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     }
   }
 
+// better load balanced, but twice as long...
+///#pragma omp parallel
+///{
+///  static dcomplex **ft = (dcomplex **)NULL, **delft;
+///  if (ft == (dcomplex **)NULL) {
+///    // Allocate memory
+///    ft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
+///    delft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
+///  }
+///
+///  // Loop over all y indices
+///  #pragma omp for
+///  for (int jy = 0; jy < mesh->LocalNy; jy++) {
+///
+///    // Take forward FFT
+///    for (int jx = 0; jx < mesh->LocalNx; jx++)
+///      rfft(&f(jx, jy, 0), ncz, ft[jx]);
+///
+///    // Loop over kz
+///    for (int jz = 0; jz <= ncz / 2; jz++) {
+///      dcomplex a, b, c;
+///
+///      // No smoothing in the x direction
+///      for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
+///        // Perform x derivative
+///
+///        laplace_tridag_coefs(jx, jy, jz, a, b, c);
+///
+///        delft[jx][jz] = a * ft[jx - 1][jz] + b * ft[jx][jz] + c * ft[jx + 1][jz];
+///      }
+///    }
+///
+///    // Reverse FFT
+///    for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
+///
+///      irfft(delft[jx], ncz, &result(jx, jy, 0));
+///    }
+///
+///    // Boundaries
+///    for (int jz = 0; jz < ncz; jz++) {
+///      for (int jx = 0; jx<mesh->xstart; jx++) {
+///	result(jx, jy, jz) = 0.0;
+///      }
+///      for (int jx = mesh->xend+1; jx<mesh->LocalNx; jx++) {
+///	result(jx, jy, jz) = 0.0;
+///      }
+///    }
+///  }
+///}
+
   // Set the output location
   result.setLocation(f.getLocation());
 
@@ -709,6 +775,7 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
 }
 
 const FieldPerp Coordinates::Delp2(const FieldPerp &f) {
+  SCOREP0();
   TRACE("Coordinates::Delp2( FieldPerp )");
 
   FieldPerp result;

@@ -33,6 +33,7 @@ class FieldPerp;
 #include "bout/deprecated.hxx"
 
 #include "bout/dataiterator.hxx"
+#include "bout/singledataiterator.hxx"
 #include "bout/array.hxx"
 #include "bout/assert.hxx"
 
@@ -88,6 +89,13 @@ class FieldPerp : public Field {
   }
   inline const BoutReal& operator[](const DataIterator &d) const {
     return operator()(d.x, d.z);
+  }
+  BoutReal& operator()(const SingleDataIterator &i) {
+      return data[i.icount/i.ny];
+  }
+
+  const BoutReal& operator()(const SingleDataIterator &i) const {
+      return data[i.rgn[i.icount]/i.ny];
   }
   BoutReal& operator[](const Indices &i) {
     return operator()(i.x, i.z);

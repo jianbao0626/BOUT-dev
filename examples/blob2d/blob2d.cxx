@@ -9,6 +9,7 @@
 #include <bout/physicsmodel.hxx>   // Commonly used BOUT++ components
 #include <derivs.hxx>              // To use DDZ()
 #include <invert_laplace.hxx>      // Laplacian inversion
+#include <bout/scorepwrapper.hxx>
 
 /// 2D drift-reduced model, mainly used for blob studies
 ///
@@ -47,6 +48,7 @@ private:
 
 protected:
   int init(bool restarting) {
+    SCOREP0();
 
     /******************Reading options *****************/
 
@@ -106,6 +108,7 @@ protected:
   }
 
   int rhs(BoutReal t) {
+    SCOREP0();
 
     // Run communications
     ////////////////////////////////////////////////////////////////////////////
@@ -128,7 +131,7 @@ protected:
     // Density Evolution
     /////////////////////////////////////////////////////////////////////////////
 
-    ddt(n) = -bracket(phi,n,BRACKET_SIMPLE)    // ExB term
+    ddt(n) = -bracket(phi,n,BRACKET_ARAKAWA_SDI)    // ExB term
       + 2*DDZ(n)*(rho_s/R_c)               // Curvature term
       + D_n*Delp2(n)
       ;                                         // Diffusion term
@@ -143,7 +146,7 @@ protected:
     // Vorticity evolution
     /////////////////////////////////////////////////////////////////////////////
 
-    ddt(omega) = -bracket(phi,omega, BRACKET_SIMPLE)                     // ExB term
+    ddt(omega) = -bracket(phi,omega, BRACKET_ARAKAWA_SDI)                     // ExB term
       + 2*DDZ(n)*(rho_s/R_c)/n                                   // Curvature term
       + D_vort*Delp2(omega)/n                                    // Viscous diffusion term
       ;

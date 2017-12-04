@@ -36,6 +36,7 @@
 #include <utils.hxx>
 #include <fft.hxx>
 #include <bout/sys/timer.hxx>
+#include <bout/scorepwrapper.hxx>
 
 #include "spt.hxx"
 
@@ -73,10 +74,12 @@ LaplaceSPT::~LaplaceSPT() {
 }
 
 const FieldPerp LaplaceSPT::solve(const FieldPerp &b) {
+  SCOREP0();
   return solve(b,b);
 }
 
 const FieldPerp LaplaceSPT::solve(const FieldPerp &b, const FieldPerp &x0) {
+  SCOREP0();
   FieldPerp x;
   x.allocate();
   
@@ -113,6 +116,7 @@ const FieldPerp LaplaceSPT::solve(const FieldPerp &b, const FieldPerp &x0) {
  * in the config file uses less memory, and less communication overlap
  */
 const Field3D LaplaceSPT::solve(const Field3D &b) {
+  SCOREP0();
   Timer timer("invert");
   Field3D x;
   x.allocate();
@@ -148,6 +152,7 @@ const Field3D LaplaceSPT::solve(const Field3D &b) {
 }
 
 const Field3D LaplaceSPT::solve(const Field3D &b, const Field3D &x0) {
+  SCOREP0();
   if(  ((inner_boundary_flags & INVERT_SET) && mesh->firstX()) ||
        ((outer_boundary_flags & INVERT_SET) && mesh->lastX()) ) {
     Field3D bs = copy(b);
@@ -197,6 +202,7 @@ void LaplaceSPT::tridagForward(dcomplex *a, dcomplex *b, dcomplex *c,
                                 dcomplex *r, dcomplex *u, int n,
                                 dcomplex *gam,
                                 dcomplex &bet, dcomplex &um, bool start) {
+  SCOREP0();
   int j;
   
   if(start) {
@@ -230,6 +236,7 @@ void LaplaceSPT::tridagForward(dcomplex *a, dcomplex *b, dcomplex *c,
  */
 void LaplaceSPT::tridagBack(dcomplex *u, int n,
                              dcomplex *gam, dcomplex &gp, dcomplex &up) {
+  SCOREP0();
   int j;
 
   u[n-1] = u[n-1] - gp*up;
@@ -262,6 +269,7 @@ void LaplaceSPT::tridagBack(dcomplex *u, int n,
  * @param[in]    d      Optional factor to multiply the Delp2 operator
  */
 int LaplaceSPT::start(const FieldPerp &b, SPT_data &data) {
+  SCOREP0();
   if(mesh->firstX() && mesh->lastX())
     throw BoutException("Error: SPT method only works for mesh->NXPE > 1\n");
 
@@ -325,6 +333,7 @@ int LaplaceSPT::start(const FieldPerp &b, SPT_data &data) {
   @param[inout] data  Structure which keeps track of the calculation
 */
 int LaplaceSPT::next(SPT_data &data) {
+  SCOREP0();
   if(data.proc < 0) // Already finished
     return 1;
   
@@ -451,6 +460,7 @@ int LaplaceSPT::next(SPT_data &data) {
   @param[out]   x      The result
 */
 void LaplaceSPT::finish(SPT_data &data, FieldPerp &x) {
+  SCOREP0();
   int ncx = mesh->LocalNx-1;
   int ncz = mesh->LocalNz;
 
@@ -496,6 +506,7 @@ void LaplaceSPT::finish(SPT_data &data, FieldPerp &x) {
 // SPT_data helper class
 
 void LaplaceSPT::SPT_data::allocate(int mm, int nx) {
+  SCOREP0();
   if(bk != NULL)
     return; // Already allocated
   
