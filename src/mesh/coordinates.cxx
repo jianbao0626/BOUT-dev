@@ -684,14 +684,14 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     for (int jx = 0; jx < mesh->LocalNx; jx++)
       rfft(&f(jx, jy, 0), ncz, ft[jx]);
 
-    // Loop over kz
+    // Perform x derivative
+    // No smoothing in the x direction
     #pragma omp parallel for
-    for (int jz = 0; jz <= ncz / 2; jz++) {
+    for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
+
       dcomplex a, b, c;
 
-      // No smoothing in the x direction
-      for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
-        // Perform x derivative
+      for (int jz = 0; jz <= ncz / 2; jz++) {
 
         laplace_tridag_coefs(jx, jy, jz, a, b, c);
 
