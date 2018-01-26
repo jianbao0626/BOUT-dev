@@ -10,10 +10,10 @@
 #include <iostream>
 #include "unused.hxx"
 
-#ifdef _OPENMP
-#include <omp.h>
-inline int DI_spread_work(int num_work, int thread, int max_thread);
-#endif
+// #ifdef _OPENMP
+// #include <omp.h>
+// inline int DI_spread_work(int num_work, int thread, int max_thread);
+// #endif
 
 /*!
  * Set of indices - DataIterator is dereferenced into these
@@ -61,9 +61,9 @@ private:
    * This initialises OpenMP threads if enabled, and
    * divides iteration index ranges between threads
    */
-#ifdef _OPENMP
-  inline void omp_init(bool end);
-#endif
+// #ifdef _OPENMP
+//   inline void omp_init(bool end);
+// #endif
 public:
   /*!
    * Constructor. This sets index ranges.
@@ -73,21 +73,21 @@ public:
   DataIterator(int xs, int xe,
 	       int ys, int ye,
 	       int zs, int ze) : 
-#ifndef _OPENMP
+    //#ifndef _OPENMP
     x(xs), y(ys), z(zs),
     xstart(xs),   ystart(ys),   zstart(zs),
     xmin(xstart), ymin(ystart), zmin(zstart),
     xend(xe),     yend(ye),     zend(ze),
     xmax(xend),   ymax(yend),   zmax(zend),
-#else
-    xmin(xs),     ymin(ys),     zmin(zs),
-    xmax(xe),     ymax(ye),     zmax(ze),
-#endif
+// #else
+//     xmin(xs),     ymin(ys),     zmin(zs),
+//     xmax(xe),     ymax(ye),     zmax(ze),
+// #endif
     isEnd(false)
   {
-#ifdef _OPENMP
-    omp_init(false);
-#endif
+// #ifdef _OPENMP
+//     omp_init(false);
+// #endif
   }
 
   /*!
@@ -97,21 +97,21 @@ public:
   DataIterator(int xs, int xe,
 	       int ys, int ye,
 	       int zs, int ze, void* UNUSED(dummy)) :
-#ifndef _OPENMP
+    //#ifndef _OPENMP
     x(xe), y(ye), z(ze),
     xstart(xs),   ystart(ys),   zstart(zs),
     xmin(xstart), ymin(ystart), zmin(zstart),
     xend(xe),     yend(ye),     zend(ze),
     xmax(xend),   ymax(yend),   zmax(zend),
-#else
-    xmin(xs), ymin(ys),   zmin(zs),
-    xmax(xe), ymax(ye),   zmax(ze),
-#endif
+// #else
+//     xmin(xs), ymin(ys),   zmin(zs),
+//     xmax(xe), ymax(ye),   zmax(ze),
+// #endif
     isEnd(true)
   {
-#ifdef _OPENMP
-    omp_init(true);
-#endif
+// #ifdef _OPENMP
+//     omp_init(true);
+// #endif
     next();
   }
   
@@ -214,31 +214,31 @@ public:
    * using the more idiomatic it != DataIterator::end() ?
    */
   bool done() const {
-#ifndef _OPENMP
+    //#ifndef _OPENMP
     return (x > xend) || (x < xstart);
-#else //_OPENMP
-    return (x == xend && y == yend && z > zend)
-      || x > xend ||
-      (x <= xstart && y <= ystart && z < zstart)  ;
-#endif //_OPENMP
+// #else //_OPENMP
+//     return (x == xend && y == yend && z > zend)
+//       || x > xend ||
+//       (x <= xstart && y <= ystart && z < zstart)  ;
+// #endif //_OPENMP
   }
   
 private:
   DataIterator(); // Disable null constructor
 
-#ifndef _OPENMP
+  //#ifndef _OPENMP
   const int xstart, ystart, zstart;
-#else
-  int xstart, ystart, zstart;
-#endif
+// #else
+//   int xstart, ystart, zstart;
+// #endif
 
   int xmin, ymin, zmin;
 
-#ifndef _OPENMP
+  //#ifndef _OPENMP
   const int xend, yend, zend;
-#else
-  int xend, yend, zend;
-#endif
+// #else
+//   int xend, yend, zend;
+// #endif
 
   int xmax, ymax, zmax;
 
@@ -321,58 +321,58 @@ struct IndexRange {
   }
 };
 
-#ifdef _OPENMP
-inline int DI_spread_work(int work,int cp,int np){
-  int pp=work/np;
-  int rest=work%np;
-  int result=pp*cp;
-  if (rest > cp){
-    result +=cp;
-  } else {
-    result +=rest;
-  }
-  return result;
-};
+// #ifdef _OPENMP
+// inline int DI_spread_work(int work,int cp,int np){
+//   int pp=work/np;
+//   int rest=work%np;
+//   int result=pp*cp;
+//   if (rest > cp){
+//     result +=cp;
+//   } else {
+//     result +=rest;
+//   }
+//   return result;
+// };
 
-inline void DataIterator::omp_init(bool end){
-  // In the case of OPENMP we need to calculate the range
-  int threads=omp_get_num_threads();
-  if (threads > 1){
-    int ny=ymax-ymin+1;
-    int nz=zmax-zmin+1;
-    int work  = (xmax-xmin+1)*ny*nz;
-    int current_thread = omp_get_thread_num();
-    int begin_index = DI_spread_work(work,current_thread,threads);
-    int end_index   = DI_spread_work(work,current_thread+1,threads);
-    --end_index;
-    zend   = (end_index   % nz) + zmin;
-    zstart = (begin_index % nz) + zmin;
-    end_index   /= nz;
-    begin_index /= nz;
-    yend   = (end_index   % ny) + ymin;
-    ystart = (begin_index % ny) + ymin;
-    end_index   /= ny;
-    begin_index /= ny;
-    xend   = end_index;
-    xstart = begin_index;
-  } else {
-    zstart = zmin;
-    zend   = zmax;
-    ystart = ymin;
-    yend   = ymax;
-    xstart = xmin;
-    xend   = xmax;
-  }
-  if (!end){
-    x=xstart;
-    y=ystart;
-    z=zstart;
-  } else {
-    x=xend;
-    y=yend;
-    z=zend;
-  }
-};
-#endif
+// inline void DataIterator::omp_init(bool end){
+//   // In the case of OPENMP we need to calculate the range
+//   int threads=omp_get_num_threads();
+//   if (threads > 1){
+//     int ny=ymax-ymin+1;
+//     int nz=zmax-zmin+1;
+//     int work  = (xmax-xmin+1)*ny*nz;
+//     int current_thread = omp_get_thread_num();
+//     int begin_index = DI_spread_work(work,current_thread,threads);
+//     int end_index   = DI_spread_work(work,current_thread+1,threads);
+//     --end_index;
+//     zend   = (end_index   % nz) + zmin;
+//     zstart = (begin_index % nz) + zmin;
+//     end_index   /= nz;
+//     begin_index /= nz;
+//     yend   = (end_index   % ny) + ymin;
+//     ystart = (begin_index % ny) + ymin;
+//     end_index   /= ny;
+//     begin_index /= ny;
+//     xend   = end_index;
+//     xstart = begin_index;
+//   } else {
+//     zstart = zmin;
+//     zend   = zmax;
+//     ystart = ymin;
+//     yend   = ymax;
+//     xstart = xmin;
+//     xend   = xmax;
+//   }
+//   if (!end){
+//     x=xstart;
+//     y=ystart;
+//     z=zstart;
+//   } else {
+//     x=xend;
+//     y=yend;
+//     z=zend;
+//   }
+// };
+// #endif
 
 #endif // __DATAITERATOR_H__
