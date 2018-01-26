@@ -9,13 +9,13 @@
 # test-cyclic
 # test-invpar
 # test-smooth
-test-gyro
-test-delp2
+#test-gyro
+#test-delp2
 # test-vec
 # test-griddata
 # !test-fieldgroup
 # !test-initial
-test-stopCheck
+#test-stopCheck
 test-subdir
 #next one is broken
 test-fci-slab

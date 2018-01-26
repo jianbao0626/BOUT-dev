@@ -81,10 +81,10 @@ for zeff in zlist:
     print("Running drift instability test, zeff = ", zeff)
 
     # Run the case
-    s, out = launch_safe("./2fluid timestep="+str(timestep), runcmd=MPIRUN, nproc=nproc, pipe=True)
-    f = open("run.log."+str(zeff), "w")
-    f.write(out)
-    f.close()
+    s, out = launch_safe("./2fluid timestep="+str(timestep), runcmd=MPIRUN, nproc=nproc, pipe=False)
+    # f = open("run.log."+str(zeff), "w")
+    # f.write(out)
+    # f.close()
 
     # Collect data
     Ni = collect("Ni", path="data", xind=2, yind=20, info=False)
