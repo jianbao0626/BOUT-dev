@@ -1342,32 +1342,31 @@ const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD meth
 
     result.allocate(); // Make sure data allocated
 
-    int ncz = mesh->LocalNz;
+    const int ncz = mesh->LocalNz;
 
-    //#pragma omp parallel
+    int xs = mesh->xstart;
+    int xe = mesh->xend;
+    const int ys = mesh->ystart;
+    const int ye = mesh->yend;
+
+    if (inc_xbndry) { // Include x boundary region (for mixed XZ derivatives)
+      xs = 0;
+      xe = mesh->LocalNx - 1;
+    }
+
+    // Calculate how many Z wavenumbers will be removed
+    int kfilter =
+      static_cast<int>(fft_derivs_filter * ncz / 2); // truncates, rounding down
+    if (kfilter < 0)
+      kfilter = 0;
+    if (kfilter > (ncz / 2))
+      kfilter = ncz / 2;
+    const int kmax = ncz / 2 - kfilter; // Up to and including this wavenumber index
+
+#pragma omp parallel
     {
       Array<dcomplex> cv(ncz / 2 + 1);
-
-      int xs = mesh->xstart;
-      int xe = mesh->xend;
-      int ys = mesh->ystart;
-      int ye = mesh->yend;
-
-      if (inc_xbndry) { // Include x boundary region (for mixed XZ derivatives)
-        xs = 0;
-        xe = mesh->LocalNx - 1;
-      }
-
-      // Calculate how many Z wavenumbers will be removed
-      int kfilter =
-          static_cast<int>(fft_derivs_filter * ncz / 2); // truncates, rounding down
-      if (kfilter < 0)
-        kfilter = 0;
-      if (kfilter > (ncz / 2))
-        kfilter = ncz / 2;
-      int kmax = ncz / 2 - kfilter; // Up to and including this wavenumber index
-
-      //#pragma omp for
+#pragma omp for
       for (int jx = xs; jx <= xe; jx++) {
         for (int jy = ys; jy <= ye; jy++) {
           rfft(f(jx, jy), ncz, cv.begin()); // Forward FFT
