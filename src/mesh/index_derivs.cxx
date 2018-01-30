@@ -1366,7 +1366,7 @@ const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD meth
 #pragma omp parallel
     {
       Array<dcomplex> cv(ncz / 2 + 1);
-#pragma omp for
+#pragma omp for collapse(2)
       for (int jx = xs; jx <= xe; jx++) {
         for (int jy = ys; jy <= ye; jy++) {
           rfft(f(jx, jy), ncz, cv.begin()); // Forward FFT
