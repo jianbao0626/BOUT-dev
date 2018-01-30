@@ -1363,7 +1363,7 @@ const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD meth
       kfilter = ncz / 2;
     const int kmax = ncz / 2 - kfilter; // Up to and including this wavenumber index
     Array<dcomplex> cv(ncz / 2 + 1);
-#pragma omp parallel private(cv)
+#pragma omp parallel firstprivate(cv)
     {
 #pragma omp for
       for (int jx = xs; jx <= xe; jx++) {
