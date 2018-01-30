@@ -6,6 +6,7 @@
 #include "laplacefactory.hxx"
 
 #include "impls/serial_tri/serial_tri.hxx"
+#include "impls/serial_tri_omp/serial_tri_omp.hxx"
 #include "impls/serial_band/serial_band.hxx"
 #include "impls/pdd/pdd.hxx"
 #include "impls/spt/spt.hxx"
@@ -18,6 +19,7 @@
 #define LAPLACE_SPT  "spt"
 #define LAPLACE_PDD  "pdd"
 #define LAPLACE_TRI  "tri"
+#define LAPLACE_TRI_OMP  "tri_omp"
 #define LAPLACE_BAND "band"
 #define LAPLACE_PETSC "petsc"
 #define LAPLACE_MUMPS "mumps"
@@ -48,6 +50,8 @@ Laplacian* LaplaceFactory::createLaplacian(Options *options) {
 
     if(strcasecmp(type.c_str(), LAPLACE_TRI) == 0) {
       return new LaplaceSerialTri(options);
+    }else if(strcasecmp(type.c_str(), LAPLACE_TRI_OMP) == 0) {
+      return new LaplaceSerialTriOmp(options);
     }else if(strcasecmp(type.c_str(), LAPLACE_BAND) == 0) {
       return new LaplaceSerialBand(options);
     }else if(strcasecmp(type.c_str(), LAPLACE_SPT) == 0) {

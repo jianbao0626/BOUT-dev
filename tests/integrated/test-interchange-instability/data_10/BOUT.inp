@@ -49,6 +49,12 @@ second = FFT
 upwind = W3
 
 ##################################################
+# Inversion settings
+[laplace]
+
+type = tri_omp
+
+##################################################
 # Solver settings
 
 [solver]
