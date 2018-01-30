@@ -1362,11 +1362,10 @@ const Field3D Mesh::indexDDZ(const Field3D &f, CELL_LOC outloc, DIFF_METHOD meth
     if (kfilter > (ncz / 2))
       kfilter = ncz / 2;
     const int kmax = ncz / 2 - kfilter; // Up to and including this wavenumber index
-
-#pragma omp parallel
+    Array<dcomplex> cv(ncz / 2 + 1);
+#pragma omp parallel private(cv)
     {
-      Array<dcomplex> cv(ncz / 2 + 1);
-#pragma omp for collapse(2)
+#pragma omp for
       for (int jx = xs; jx <= xe; jx++) {
         for (int jy = ys; jy <= ye; jy++) {
           rfft(f(jx, jy), ncz, cv.begin()); // Forward FFT
