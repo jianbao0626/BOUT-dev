@@ -124,8 +124,8 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     outbndry = 1;
 #pragma omp parallel
   {
-#pragma omp for  
-  for (int ix = 0; ix < mesh->LocalNx; ix++) {
+#pragma omp single
+    for (int ix = 0; ix < mesh->LocalNx; ix++) {
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
      * If the INVERT_SET flag is set (meaning that x0 will be used to set the
@@ -212,7 +212,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
   }
 
   // Done inversion, transform back
-#pragma omp for    
+#pragma omp single
   for(int ix=0; ix<=ncx; ix++){
 
     if(global_flags & INVERT_ZERO_DC)
