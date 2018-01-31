@@ -122,8 +122,8 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     inbndry = 1;
   if (outer_boundary_flags & INVERT_BNDRY_ONE)
     outbndry = 1;
-  //#pragma omp single
-    for (int ix = 0; ix < mesh->LocalNx; ix++) {
+
+  for (int ix = 0; ix < mesh->LocalNx; ix++) {
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
      * If the INVERT_SET flag is set (meaning that x0 will be used to set the
@@ -143,14 +143,11 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
       rfft(b[ix], ncz, bk[ix].data());
     }
   }
-#pragma omp parallel
-  {
-
   /* Solve differential equation in x for each fourier mode
    * Note that only the non-degenerate fourier modes are being used (i.e. the
    * offset and all the modes up to the Nyquist frequency)
    */
-#pragma omp for  
+#pragma omp parallel for  
   for (int kz = 0; kz <= maxmode; kz++) {
     Array<dcomplex> avec(mesh->LocalNx);
     Array<dcomplex> bvec(mesh->LocalNx);
@@ -204,15 +201,14 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
         xk1d[ix] -= offset;
       }
     }
-
+ 
     // Store the solution xk for the current fourier mode in a 2D array
     for (int ix=0; ix<=ncx; ix++){
       xk[ix][kz]=xk1d[ix];
     }
   }
-  }
+
   // Done inversion, transform back
-  //#pragma omp single
   for(int ix=0; ix<=ncx; ix++){
 
     if(global_flags & INVERT_ZERO_DC)
