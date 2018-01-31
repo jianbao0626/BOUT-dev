@@ -210,9 +210,9 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
       xk[ix][kz]=xk1d[ix];
     }
   }
-
+  }
   // Done inversion, transform back
-#pragma omp single
+  //#pragma omp single
   for(int ix=0; ix<=ncx; ix++){
 
     if(global_flags & INVERT_ZERO_DC)
@@ -225,7 +225,6 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
       if(!finite(x(ix,kz)))
         throw BoutException("Non-finite at %d, %d, %d", ix, jy, kz);
 #endif
-  }
   }
   return x; // Result of the inversion
 }
