@@ -122,9 +122,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     inbndry = 1;
   if (outer_boundary_flags & INVERT_BNDRY_ONE)
     outbndry = 1;
-#pragma omp parallel
-  {
-#pragma omp single
+  //#pragma omp single
     for (int ix = 0; ix < mesh->LocalNx; ix++) {
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
@@ -145,6 +143,8 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
       rfft(b[ix], ncz, bk[ix].data());
     }
   }
+#pragma omp parallel
+  {
 
   /* Solve differential equation in x for each fourier mode
    * Note that only the non-degenerate fourier modes are being used (i.e. the
