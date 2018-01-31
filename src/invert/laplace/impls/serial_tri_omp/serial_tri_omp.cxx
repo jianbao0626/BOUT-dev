@@ -122,7 +122,9 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     inbndry = 1;
   if (outer_boundary_flags & INVERT_BNDRY_ONE)
     outbndry = 1;
-
+#pragma omp parallel
+  {
+#pragma omp for  
   for (int ix = 0; ix < mesh->LocalNx; ix++) {
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
@@ -148,7 +150,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
    * Note that only the non-degenerate fourier modes are being used (i.e. the
    * offset and all the modes up to the Nyquist frequency)
    */
-#pragma omp parallel for  
+#pragma omp for  
   for (int kz = 0; kz <= maxmode; kz++) {
     Array<dcomplex> avec(mesh->LocalNx);
     Array<dcomplex> bvec(mesh->LocalNx);
@@ -159,7 +161,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     // set bk1d
     for (int ix = 0; ix <= ncx; ix++) {
       // Get bk of the current fourier mode
-      bk1d[ix] = bk[ix][kz];
+      bk1d[ix] = bk[ix][kz];//Not ideal memory access order
     }
 
     /* Set the matrix A used in the inversion of Ax=b
@@ -174,6 +176,8 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
      * bvec - the main diagonal
      * cvec - the upper diagonal
     */
+
+    // bk1d can potentially be modified in the boundaries through this call.
     tridagMatrix(std::begin(avec), std::begin(bvec), std::begin(cvec), std::begin(bk1d), jy,
                  // wave number index
                  kz,
@@ -208,6 +212,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
   }
 
   // Done inversion, transform back
+#pragma omp for    
   for(int ix=0; ix<=ncx; ix++){
 
     if(global_flags & INVERT_ZERO_DC)
@@ -221,6 +226,6 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
         throw BoutException("Non-finite at %d, %d, %d", ix, jy, kz);
 #endif
   }
-
+  }
   return x; // Result of the inversion
 }
