@@ -72,17 +72,13 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b) {
  * \param[out] x    The inverted variable.
  */
 const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &x0) {
-  Mesh *mesh = b.getMesh();
-  FieldPerp x(mesh);
+  FieldPerp x(b.getMesh());
   x.allocate();
-
-  Coordinates *coord = mesh->coordinates();
-
-  int jy = b.getIndex();
-  x.setIndex(jy);
-
-  int ncz = mesh->LocalNz; // No of z pnts (counts from 1 to easily convert to kz)
-  int ncx = mesh->LocalNx-1; // No of x pnts (counts from 0)
+  x.setIndex(b.getIndex());
+  
+  const BoutReal kwaveFactor = 2.0*PI/b.getMesh()->coordinates()->zlength();
+  const int ncz = mesh->LocalNz; // No of z pnts (counts from 1 to easily convert to kz)
+  const int ncx = mesh->LocalNx-1; // No of x pnts (counts from 0)
 
   // Setting the width of the boundary.
   // NOTE: The default is a width of 2 guard cells
@@ -126,8 +122,8 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
    * Note that only the non-degenerate fourier modes are being used (i.e. the
    * offset and all the modes up to the Nyquist frequency)
    */
-  //#pragma omp parallel for  
-  for (int kz = 0; kz <= maxmode; kz++) {
+#pragma omp parallel for  
+  for (int jz = 0; jz <= maxmode; jz++) {
     Array<dcomplex> avec(mesh->LocalNx);
     Array<dcomplex> bvec(mesh->LocalNx);
     Array<dcomplex> cvec(mesh->LocalNx);
@@ -137,7 +133,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     // set bk1d
     for (int ix = 0; ix <= ncx; ix++) {
       // Get bk of the current fourier mode
-      bk1d[ix] = bk[ix][kz];//Not ideal memory access order
+      bk1d[ix] = bk[ix][jz];//Not ideal memory access order
     }
 
     /* Set the matrix A used in the inversion of Ax=b
@@ -154,12 +150,12 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     */
 
     // bk1d can potentially be modified in the boundaries through this call.
-    tridagMatrix(std::begin(avec), std::begin(bvec), std::begin(cvec), std::begin(bk1d), jy,
+    tridagMatrix(std::begin(avec), std::begin(bvec), std::begin(cvec), std::begin(bk1d), b.getIndex(), //jy
                  // wave number index
-                 kz,
-                 // wave number (different from kz only if we are taking a part
+                 jz,
+                 // wave number (different from jz only if we are taking a part
                  // of the z-domain [and not from 0 to 2*pi])
-                 kz*2.0*PI/coord->zlength(),
+                 jz*kwaveFactor,
                  global_flags, inner_boundary_flags, outer_boundary_flags,
                  &A, &C, &D);
 
@@ -170,7 +166,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
 
     } 
     // If the global flag is set to INVERT_KX_ZERO
-    if ((global_flags & INVERT_KX_ZERO) && (kz == 0)) {
+    if ((global_flags & INVERT_KX_ZERO) && (jz == 0)) {
       dcomplex offset(0.0);
       for (int ix = mesh->xstart; ix <= mesh->xend; ix++) {
         offset += xk1d[ix];
@@ -183,13 +179,13 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
  
     // Store the solution xk for the current fourier mode in a 2D array
     for (int ix=0; ix<=ncx; ix++){
-      xk[ix][kz]=xk1d[ix];
+      xk[ix][jz]=xk1d[ix];
     }
   }
 
   for (int ix=0; ix<mesh->LocalNx; ix++){
-    for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
-      xk[ix][kz] = 0.0;
+    for(int jz=maxmode+1; jz < ncz/2 + 1; jz++){
+      xk[ix][jz] = 0.0;
     }
   }
 
@@ -202,9 +198,9 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     irfft(xk[ix].data(), ncz, x[ix]);
 
 #if CHECK > 2
-    for(int kz=0;kz<ncz;kz++)
-      if(!finite(x(ix,kz)))
-        throw BoutException("Non-finite at %d, %d, %d", ix, jy, kz);
+    for(int jz=0;jz<ncz;jz++)
+      if(!finite(x(ix,jz)))
+        throw BoutException("Non-finite at %d, %d, %d", ix, b.getIndex(), jz);
 #endif
   }
   return x; // Result of the inversion
