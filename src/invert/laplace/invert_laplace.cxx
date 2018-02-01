@@ -150,7 +150,6 @@ const Field3D Laplacian::solve(const Field3D &b) {
 
   int status = 0;
   try {
-#pragma omp parallel for
     for(int jy=ys; jy <= ye; jy++) {
       // 1. Slice b (i.e. take a X-Z plane out of the field)
       // 2. Send it to the solver of the implementation (determined during creation)
@@ -201,7 +200,6 @@ const Field3D Laplacian::solve(const Field3D &b, const Field3D &x0) {
 
   int status = 0;
   try {
-#pragma omp parallel for
     for(int jy=ys; jy <= ye; jy++) {
       // 1. Slice b and x (i.e. take a X-Z plane out of the field)
       // 2. Send them to the solver of the implementation (determined during creation)

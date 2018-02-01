@@ -42,32 +42,6 @@ LaplaceSerialTriOmp::LaplaceSerialTriOmp(Options *opt) : Laplacian(opt), A(0.0),
   if(!mesh->firstX() || !mesh->lastX()) {
     throw BoutException("LaplaceSerialTriOmp only works for mesh->NXPE = 1");
   }
-
-  // Allocate memory
-
-  // int ncz = mesh->LocalNz;
-
-  // xk.resize(mesh->LocalNx);
-  // bk.resize(mesh->LocalNx);
-  // for(int jx = 0 ; jx < mesh->LocalNx; jx++){
-  //   xk[jx].resize(ncz/2 + 1);
-  //   bk[jx].resize(ncz/2 + 1);
-  // }
-  // // xk1d = Array<dcomplex>(mesh->LocalNx);
-  // // bk1d = Array<dcomplex>(mesh->LocalNx);
-
-  // //initialise xk to 0 as we only visit 0<= kz <= maxmode in solve
-  // //Initialise bk to 0 as we only visit 0<= kz <= maxmode in solve
-  // for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
-  //   for (int ix=0; ix<mesh->LocalNx; ix++){
-  //     xk[ix][kz] = 0.0;
-  //     bk[ix][kz] = 0.0;
-  //   }
-  // }
-
-  // avec = Array<dcomplex>(mesh->LocalNx);
-  // bvec = Array<dcomplex>(mesh->LocalNx);
-  // cvec = Array<dcomplex>(mesh->LocalNx);
 }
 
 LaplaceSerialTriOmp::~LaplaceSerialTriOmp() {
@@ -128,7 +102,6 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
   for (int ix = 0; ix < mesh->LocalNx; ix++) {
     bk[ix].resize(ncz/2+1);
     xk[ix].resize(ncz/2+1);
-
 
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
@@ -214,10 +187,9 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     }
   }
 
-  for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
-    for (int ix=0; ix<mesh->LocalNx; ix++){
+  for (int ix=0; ix<mesh->LocalNx; ix++){
+    for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
       xk[ix][kz] = 0.0;
-      bk[ix][kz] = 0.0;
     }
   }
 

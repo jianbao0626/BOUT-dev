@@ -61,28 +61,6 @@ private:
   // The coefficents in
   // D*grad_perp^2(x) + (1/C)*(grad_perp(C))*grad_perp(x) + A*x = b
   Field2D A, C, D;
-
-  /* Allocation fo
-   * bk   = The fourier transformed of b, where b is one of the inputs in
-   *        LaplaceSerialTriOmp::solve()
-   * bk1d = The 1d array of bk
-   * xk   = The fourier transformed of x, where x the output of
-   *        LaplaceSerialTriOmp::solve()
-   * xk1d = The 1d array of xk
-   */
-  typedef std::vector<std::vector<dcomplex>> dcomplexMatrix;
-  dcomplexMatrix xk, bk;
-  //  Array<dcomplex> xk1d, bk1d;
-
-  /* Coefficents in the tridiagonal solver matrix
-   * Following the notation in "Numerical recipes"
-   * avec is the lower diagonal of the matrix
-   * bvec is the diagonal of the matrix
-   * cvec is the upper diagonal of the matrix
-   * NOTE: Do not confuse avec, bvec and cvec with the A, C, and D coefficients
-   *       above
-   */
-  //  Array<dcomplex> avec, bvec, cvec;
 };
 
 #endif // __SERIAL_TRIOMP_H__
