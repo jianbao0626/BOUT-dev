@@ -45,25 +45,25 @@ LaplaceSerialTriOmp::LaplaceSerialTriOmp(Options *opt) : Laplacian(opt), A(0.0),
 
   // Allocate memory
 
-  int ncz = mesh->LocalNz;
+  // int ncz = mesh->LocalNz;
 
-  xk.resize(mesh->LocalNx);
-  bk.resize(mesh->LocalNx);
-  for(int jx = 0 ; jx < mesh->LocalNx; jx++){
-    xk[jx].resize(ncz/2 + 1);
-    bk[jx].resize(ncz/2 + 1);
-  }
-  // xk1d = Array<dcomplex>(mesh->LocalNx);
-  // bk1d = Array<dcomplex>(mesh->LocalNx);
+  // xk.resize(mesh->LocalNx);
+  // bk.resize(mesh->LocalNx);
+  // for(int jx = 0 ; jx < mesh->LocalNx; jx++){
+  //   xk[jx].resize(ncz/2 + 1);
+  //   bk[jx].resize(ncz/2 + 1);
+  // }
+  // // xk1d = Array<dcomplex>(mesh->LocalNx);
+  // // bk1d = Array<dcomplex>(mesh->LocalNx);
 
-  //initialise xk to 0 as we only visit 0<= kz <= maxmode in solve
-  //Initialise bk to 0 as we only visit 0<= kz <= maxmode in solve
-  for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
-    for (int ix=0; ix<mesh->LocalNx; ix++){
-      xk[ix][kz] = 0.0;
-      bk[ix][kz] = 0.0;
-    }
-  }
+  // //initialise xk to 0 as we only visit 0<= kz <= maxmode in solve
+  // //Initialise bk to 0 as we only visit 0<= kz <= maxmode in solve
+  // for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
+  //   for (int ix=0; ix<mesh->LocalNx; ix++){
+  //     xk[ix][kz] = 0.0;
+  //     bk[ix][kz] = 0.0;
+  //   }
+  // }
 
   // avec = Array<dcomplex>(mesh->LocalNx);
   // bvec = Array<dcomplex>(mesh->LocalNx);
@@ -122,8 +122,14 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     inbndry = 1;
   if (outer_boundary_flags & INVERT_BNDRY_ONE)
     outbndry = 1;
+  
+  Array<std::vector<dcomplex>> bk(mesh->LocalNx), xk(mesh->LocalNx);
 
   for (int ix = 0; ix < mesh->LocalNx; ix++) {
+    bk[ix].resize(ncz/2+1);
+    xk[ix].resize(ncz/2+1);
+
+
     /* This for loop will set the bk (initialized by the constructor)
      * bk is the z fourier modes of b in z
      * If the INVERT_SET flag is set (meaning that x0 will be used to set the
@@ -205,6 +211,13 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
     // Store the solution xk for the current fourier mode in a 2D array
     for (int ix=0; ix<=ncx; ix++){
       xk[ix][kz]=xk1d[ix];
+    }
+  }
+
+  for(int kz=maxmode+1; kz < ncz/2 + 1; kz++){
+    for (int ix=0; ix<mesh->LocalNx; ix++){
+      xk[ix][kz] = 0.0;
+      bk[ix][kz] = 0.0;
     }
   }
 
