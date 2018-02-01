@@ -153,7 +153,7 @@ const FieldPerp LaplaceSerialTriOmp::solve(const FieldPerp &b, const FieldPerp &
    * Note that only the non-degenerate fourier modes are being used (i.e. the
    * offset and all the modes up to the Nyquist frequency)
    */
-#pragma omp parallel for  
+  //#pragma omp parallel for  
   for (int kz = 0; kz <= maxmode; kz++) {
     Array<dcomplex> avec(mesh->LocalNx);
     Array<dcomplex> bvec(mesh->LocalNx);
