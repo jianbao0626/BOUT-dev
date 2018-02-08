@@ -38,6 +38,11 @@ class Coordinates;
 #include "mesh.hxx"
 #include "datafile.hxx"
 #include <bout_types.hxx>
+#include <dcomplex.hxx>
+#include "invert_laplace.hxx"
+
+/// A 3D array, implemented as nested vectors
+typedef std::vector<std::vector<std::vector<dcomplex>>> arr3Dvec;
 
 /*!
  * Represents a coordinate system, and associated operators
@@ -92,6 +97,7 @@ public:
   int geometry();
   int calcCovariant(); ///< Inverts contravatiant metric to get covariant
   int calcContravariant(); ///< Invert covariant metric to get contravariant
+  int calcLaplaceCoefs(); /// Precompute coefficients for Laplace operator
   int jacobian(); ///< Calculate J and Bxy
 
   // Operators
@@ -106,7 +112,7 @@ public:
   
   /// Advection along magnetic field V*b.Grad(f)
   const Field2D Vpar_Grad_par(const Field2D &v, const Field2D &f, CELL_LOC outloc=CELL_DEFAULT, DIFF_METHOD method=DIFF_DEFAULT);
-  const Field3D Vpar_Grad_par(const Field &v, const Field &f, CELL_LOC outloc=CELL_DEFAULT, DIFF_METHOD method=DIFF_DEFAULT);
+  const Field3D Vpar_Grad_par(const Field3D &v, const Field3D &f, CELL_LOC outloc=CELL_DEFAULT, DIFF_METHOD method=DIFF_DEFAULT);
   
   /// Divergence along magnetic field  Div(b*f) = B.Grad(f/B)
   const Field2D Div_par(const Field2D &f, CELL_LOC outloc=CELL_DEFAULT, DIFF_METHOD method=DIFF_DEFAULT);
@@ -122,6 +128,7 @@ public:
   const Field2D Delp2(const Field2D &f);
   const Field3D Delp2(const Field3D &f);
   const FieldPerp Delp2(const FieldPerp &f);
+  arr3Dvec a, b, c;
   
   // Full parallel Laplacian operator on scalar field
   // Laplace_par(f) = Div( b (b dot Grad(f)) ) 
@@ -138,8 +145,9 @@ private:
   vector<int> indxc, indxr, ipiv;
   int nz; // Size of mesh in Z. This is mesh->ngz-1
   int ncz;
-  dcomplex **ft;
-  dcomplex **delft;
+  //dcomplex **ft;
+  //dcomplex **delft;
+  Mesh * localmesh;
 };
 
 /*

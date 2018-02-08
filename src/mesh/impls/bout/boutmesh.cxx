@@ -35,17 +35,17 @@
 
 #include "boutmesh.hxx"
 
-#include <utils.hxx>
-#include <fft.hxx>
-#include <derivs.hxx>
-#include <boutcomm.hxx>
-#include <dcomplex.hxx>
-#include <options.hxx>
-#include <boutexception.hxx>
-#include <output.hxx>
-#include <bout/sys/timer.hxx>
-#include <msg_stack.hxx>
 #include <bout/constants.hxx>
+#include <bout/sys/timer.hxx>
+#include <boutcomm.hxx>
+#include <boutexception.hxx>
+#include <dcomplex.hxx>
+#include <derivs.hxx>
+#include <fft.hxx>
+#include <msg_stack.hxx>
+#include <options.hxx>
+#include <output.hxx>
+#include <utils.hxx>
 
 /// MPI type of BoutReal for communications
 #define PVEC_REAL_MPI_TYPE MPI_DOUBLE
@@ -240,11 +240,11 @@ int BoutMesh::load() {
     BoutReal ideal = sqrt(MX * NPES / static_cast<BoutReal>(ny)); // Results in square domains
 
     output_info.write("Finding value for NXPE (ideal = %f)\n", ideal);
-    
-    for(int i=1; i<= NPES; i++) { // Loop over all possibilities
-      if( (NPES % i == 0) &&      // Processors divide equally
-          (MX % i == 0) &&        // Mesh in X divides equally
-          (ny % (NPES/i) == 0) ) { // Mesh in Y divides equally
+
+    for (int i = 1; i <= NPES; i++) { // Loop over all possibilities
+      if ((NPES % i == 0) &&          // Processors divide equally
+          (MX % i == 0) &&            // Mesh in X divides equally
+          (ny % (NPES / i) == 0)) {   // Mesh in Y divides equally
 
         output_info.write("\tCandidate value: %d\n", i);
 
@@ -611,7 +611,6 @@ int BoutMesh::load() {
 
           comm_middle = comm_outer;
           // MPI_Comm_dup(comm_outer, &comm_middle);
-
         }
       }
 
@@ -953,8 +952,8 @@ comm_handle BoutMesh::send(FieldGroup &g) {
 
   /// Mark communication handle as in progress
   ch->in_progress = true;
-  
-  return static_cast<void*>(ch);
+
+  return static_cast<void *>(ch);
 }
 
 int BoutMesh::wait(comm_handle handle) {
@@ -962,9 +961,9 @@ int BoutMesh::wait(comm_handle handle) {
 
   if (handle == NULL)
     return 1;
-  
-  CommHandle *ch = static_cast<CommHandle*>(handle);
-  
+
+  CommHandle *ch = static_cast<CommHandle *>(handle);
+
   if (!ch->in_progress)
     return 2;
 
@@ -1026,7 +1025,7 @@ int BoutMesh::wait(comm_handle handle) {
   if (async_send) {
     /// Asyncronous sending: Need to check if sends have completed (frees MPI memory)
     MPI_Status async_status;
-    
+
     if (UDATA_INDEST != -1)
       MPI_Wait(ch->sendreq, &async_status);
     if (UDATA_OUTDEST != -1)
@@ -1112,7 +1111,7 @@ comm_handle BoutMesh::receiveFromProc(int xproc, int yproc, BoutReal *buffer, in
             BoutComm::get(), ch->request);
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1171,7 +1170,7 @@ comm_handle BoutMesh::irecvXOut(BoutReal *buffer, int size, int tag) {
             BoutComm::get(), ch->request);
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1188,7 +1187,7 @@ comm_handle BoutMesh::irecvXIn(BoutReal *buffer, int size, int tag) {
             BoutComm::get(), ch->request);
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1309,7 +1308,7 @@ comm_handle BoutMesh::irecvYOutIndest(BoutReal *buffer, int size, int tag) {
     throw BoutException("Expected UDATA_INDEST to exist, but it does not.");
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1329,7 +1328,7 @@ comm_handle BoutMesh::irecvYOutOutdest(BoutReal *buffer, int size, int tag) {
     throw BoutException("Expected UDATA_OUTDEST to exist, but it does not.");
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1349,7 +1348,7 @@ comm_handle BoutMesh::irecvYInIndest(BoutReal *buffer, int size, int tag) {
     throw BoutException("Expected DDATA_INDEST to exist, but it does not.");
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 
@@ -1369,7 +1368,7 @@ comm_handle BoutMesh::irecvYInOutdest(BoutReal *buffer, int size, int tag) {
     throw BoutException("Expected DDATA_OUTDEST to exist, but it does not.");
 
   ch->in_progress = true;
-  
+
   return static_cast<comm_handle>(ch);
 }
 

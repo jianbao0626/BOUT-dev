@@ -243,7 +243,7 @@ void Solver::add(Field3D &v, const char* name) {
   }
   
   if(mms) {
-    d.MMS_err = new Field3D();
+    d.MMS_err = new Field3D(v.getMesh());
     (*d.MMS_err) = 0.0;
   } else {
     d.MMS_err = nullptr;
@@ -1167,9 +1167,8 @@ void Solver::set_id(BoutReal *udata) {
  *
  */
 const Field3D Solver::globalIndex(int localStart) {
-
   SCOREP0()
-  Field3D index = -1; // Set to -1, indicating out of domain
+  Field3D index(-1, mesh); // Set to -1, indicating out of domain
 
   int n2d = f2d.size();
   int n3d = f3d.size();
@@ -1430,10 +1429,8 @@ void Solver::post_rhs(BoutReal UNUSED(t)) {
 
   // Make sure 3D fields are at the correct cell location
   for(const auto& f : f3d) {
-    if(f.location != (f.F_var)->getLocation()) {
-      //output.write("SOLVER: Interpolating\n");
-      *(f.F_var) = interp_to(*(f.F_var), f.location);
-    }
+    ASSERT1(f.var->getLocation()==f.F_var->getLocation());
+    ASSERT1(f.var->getMesh()==f.F_var->getMesh());
   }
 
   // Apply boundary conditions to the time-derivatives

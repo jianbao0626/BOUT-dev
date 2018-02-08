@@ -57,14 +57,8 @@ extern Mesh * mesh;
 class Field {
  public:
   Field();
-  Field(Mesh * msh);
+  Field(Mesh * localmesh);
   virtual ~Field() { }
-
-  // These routines only set a stencil in one dimension
-  // Should be faster, and replaces the above SetStencil function.
-  virtual void setXStencil(stencil &fval, const bindex &bx, CELL_LOC loc = CELL_DEFAULT) const = 0;
-  virtual void setYStencil(stencil &fval, const bindex &bx, CELL_LOC loc = CELL_DEFAULT) const = 0;
-  virtual void setZStencil(stencil &fval, const bindex &bx, CELL_LOC loc = CELL_DEFAULT) const = 0;
 
   // Data access
   virtual const BoutReal& operator[](const Indices &i) const = 0;
