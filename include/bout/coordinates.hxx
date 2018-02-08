@@ -145,8 +145,6 @@ private:
   vector<int> indxc, indxr, ipiv;
   int nz; // Size of mesh in Z. This is mesh->ngz-1
   int ncz;
-  //dcomplex **ft;
-  //dcomplex **delft;
   Mesh * localmesh;
 };
 

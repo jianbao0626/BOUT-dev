@@ -17,6 +17,7 @@
 
 #include <globals.hxx>
 #include <bout/scorepwrapper.hxx>
+#include <invert_laplace.hxx>
 
 Coordinates::Coordinates(Mesh *mesh)
     : dx(1, mesh), dy(1, mesh), dz(1), d1_dx(mesh), d1_dy(mesh), J(1, mesh), Bxy(1, mesh),
@@ -27,6 +28,7 @@ Coordinates::Coordinates(Mesh *mesh)
       G1_23(mesh), G2_11(mesh), G2_22(mesh), G2_33(mesh), G2_12(mesh), G2_13(mesh),
       G2_23(mesh), G3_11(mesh), G3_22(mesh), G3_33(mesh), G3_12(mesh), G3_13(mesh),
       G3_23(mesh), G1(mesh), G2(mesh), G3(mesh), ShiftTorsion(mesh),
+      a(1), b(1), c(1),
       IntShiftTorsion(mesh), localmesh(mesh) {
 
   if (mesh->get(dx, "dx")) {
@@ -171,6 +173,8 @@ Coordinates::Coordinates(Mesh *mesh)
   }
 
 ///  // allocate memory for use in Delp2
+  
+///  arr3Dvec a, b, c;
 ///  int ncz = mesh->LocalNz;
 ///  static dcomplex **ft = (dcomplex **)NULL, **delft;
 ///  if (ft == (dcomplex **)NULL) {
@@ -355,6 +359,49 @@ int Coordinates::geometry() {
     d1_dy = mesh->indexDDY(1. / dy); // d/di(1/dy)
   } else {
     d1_dy = -d2y / (dy * dy);
+  }
+
+  return 0;
+}
+
+int Coordinates::calcLaplaceCoefs() {
+  TRACE("Coordinates::calcLaplaceCoefs");
+
+  //Allocate storage for our 3d vector structures.
+  //This could be made more succinct but this approach is fairly
+  //verbose --> transparent
+  //int nx = mesh->GlobalNx;
+  //int ny = mesh->GlobalNy;
+  //int nz = mesh->GlobalNz;
+  int nx = mesh->LocalNx;
+  int ny = mesh->LocalNy;
+  int nz = mesh->LocalNz;
+  //int nz = mesh->LocalNz/2 + 1;
+
+  a.resize(nx);
+  b.resize(nx);
+  c.resize(nx);
+
+  for(int jx=0;jx<nx;jx++){
+    a[jx].resize(nx);
+    b[jx].resize(nx);
+    c[jx].resize(nx);
+
+    for(int jy=0;jy<ny;jy++){
+      a[jx][jy].resize(nz);
+      b[jx][jy].resize(nz);
+      c[jx][jy].resize(nz);
+      
+    }
+  }
+
+  // compute coefficients
+  for (int jy = 0; jy < ny; jy++) {
+    for (int jx = 0; jx < nx; jx++) {
+      for (int jz = 0; jz < nz; jz++) {
+        laplace_tridag_coefs(jx, jy, jz, a[jx][jy][jz], b[jx][jy][jz], c[jx][jy][jz], NULL, NULL);
+      }
+    }
   }
 
   return 0;
@@ -657,14 +704,17 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     // Allocate memory
     ft = matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
     delft = matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
+
+    output.write("Calc tridagCoefs\n");
+    calcLaplaceCoefs();
   }
 
   // Loop over all y indices
   for (int jy = 0; jy < localmesh->LocalNy; jy++) {
 
     // Take forward FFT
-    #pragma omp parallel for
 
+    #pragma omp parallel for
     for (int jx = 0; jx < localmesh->LocalNx; jx++)
       rfft(&f(jx, jy, 0), ncz, ft[jx]);
 
@@ -673,13 +723,13 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     #pragma omp parallel for
     for (int jx = localmesh->xstart; jx <= localmesh->xend; jx++) {
 
-      dcomplex a, b, c;
+      //dcomplex a, b, c;
 
       for (int jz = 0; jz <= ncz / 2; jz++) {
 
-        laplace_tridag_coefs(jx, jy, jz, a, b, c);
+        //laplace_tridag_coefs(jx, jy, jz, a, b, c);
 
-        delft[jx][jz] = a * ft[jx - 1][jz] + b * ft[jx][jz] + c * ft[jx + 1][jz];
+        delft[jx][jz] = a[jx][jy][jz] * ft[jx - 1][jz] + b[jx][jy][jz] * ft[jx][jz] + c[jx][jy][jz] * ft[jx + 1][jz];
       }
     }
 
@@ -691,7 +741,6 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
     }
 
     // Boundaries
-    #pragma omp parallel for
     for (int jz = 0; jz < ncz; jz++) {
       for (int jx = 0; jx < mesh->xstart; jx++) {
         result(jx, jy, jz) = 0.0;
