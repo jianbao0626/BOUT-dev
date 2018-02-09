@@ -378,19 +378,36 @@ int Coordinates::calcLaplaceCoefs() {
   int nz = mesh->LocalNz;
   //int nz = mesh->LocalNz/2 + 1;
 
-  a.resize(nx);
-  b.resize(nx);
-  c.resize(nx);
+///  a.resize(nx);
+///  b.resize(nx);
+///  c.resize(nx);
+///
+///  for(int jx=0;jx<nx;jx++){
+///    a[jx].resize(nx);
+///    b[jx].resize(nx);
+///    c[jx].resize(nx);
+///
+///    for(int jy=0;jy<ny;jy++){
+///      a[jx][jy].resize(nz);
+///      b[jx][jy].resize(nz);
+///      c[jx][jy].resize(nz);
+///      
+///    }
+///  }
 
-  for(int jx=0;jx<nx;jx++){
-    a[jx].resize(nx);
-    b[jx].resize(nx);
-    c[jx].resize(nx);
+  a.resize(ny);
+  b.resize(ny);
+  c.resize(ny);
 
-    for(int jy=0;jy<ny;jy++){
-      a[jx][jy].resize(nz);
-      b[jx][jy].resize(nz);
-      c[jx][jy].resize(nz);
+  for(int jy=0;jy<ny;jy++){
+    a[jy].resize(nx);
+    b[jy].resize(nx);
+    c[jy].resize(nx);
+
+    for(int jx=0;jx<nx;jx++){
+      a[jy][jx].resize(nz);
+      b[jy][jx].resize(nz);
+      c[jy][jx].resize(nz);
       
     }
   }
@@ -399,7 +416,7 @@ int Coordinates::calcLaplaceCoefs() {
   for (int jy = 0; jy < ny; jy++) {
     for (int jx = 0; jx < nx; jx++) {
       for (int jz = 0; jz < nz; jz++) {
-        laplace_tridag_coefs(jx, jy, jz, a[jx][jy][jz], b[jx][jy][jz], c[jx][jy][jz], NULL, NULL);
+        laplace_tridag_coefs(jx, jy, jz, a[jy][jx][jz], b[jy][jx][jz], c[jy][jx][jz], NULL, NULL);
       }
     }
   }
@@ -729,7 +746,7 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
 
         //laplace_tridag_coefs(jx, jy, jz, a, b, c);
 
-        delft[jx][jz] = a[jx][jy][jz] * ft[jx - 1][jz] + b[jx][jy][jz] * ft[jx][jz] + c[jx][jy][jz] * ft[jx + 1][jz];
+        delft[jx][jz] = a[jy][jx][jz] * ft[jx - 1][jz] + b[jy][jx][jz] * ft[jx][jz] + c[jy][jx][jz] * ft[jx + 1][jz];
       }
     }
 
