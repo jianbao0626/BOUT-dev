@@ -98,7 +98,6 @@ public:
   int geometry();
   int calcCovariant(); ///< Inverts contravatiant metric to get covariant
   int calcContravariant(); ///< Invert covariant metric to get contravariant
-  int calcLaplaceCoefs(); /// Precompute coefficients for Laplace operator
   int jacobian(); ///< Calculate J and Bxy
 
   // Operators

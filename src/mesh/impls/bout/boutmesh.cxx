@@ -2308,23 +2308,23 @@ void BoutMesh::outputVars(Datafile &file) {
   coordinates()->outputVars(file);
 }
 
-void BoutMesh::get_region(REGION rgn) {
-  // Check the map has finished being made.
-  // Simply checking that the map exists with
-  //   if(region_map.find(rgn) == region_map.end()){ 
-  // leads to segfaults.
-
-  if( region_map_set[rgn] == false ){
-#pragma omp master
-{
-    region_map[rgn] = single_index_region(rgn);
-}
-// All threads must wait for region_map to be made.
-// This synchronization is skipped in subsequent steps.
-#pragma omp barrier
-  } 
-    region_map_set[rgn] = true;
-}
+///void BoutMesh::get_region(REGION rgn) {
+///  // Check the map has finished being made.
+///  // Simply checking that the map exists with
+///  //   if(region_map.find(rgn) == region_map.end()){ 
+///  // leads to segfaults.
+///
+///  if( region_map_set[rgn] == false ){
+///#pragma omp master
+///{
+///    region_map[rgn] = single_index_region(rgn);
+///}
+///// All threads must wait for region_map to be made.
+///// This synchronization is skipped in subsequent steps.
+///#pragma omp barrier
+///  } 
+///    region_map_set[rgn] = true;
+///}
 
 std::map<REGION,bool> BoutMesh::set_region_map_set() const {
   // region_set is a map from REGION to bool stating whether the rgn

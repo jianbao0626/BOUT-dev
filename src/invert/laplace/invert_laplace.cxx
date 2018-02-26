@@ -706,6 +706,48 @@ void Laplacian::tridagMatrix(dcomplex *avec, dcomplex *bvec, dcomplex *cvec,
   }
 }
 
+void Laplacian::calcLaplaceCoefs() {
+  TRACE("Laplacian::calcLaplaceCoefs");
+
+  //Allocate storage for our 3d vector structures.
+  //This could be made more succinct but this approach is fairly
+  //verbose --> transparent
+  //int nx = mesh->GlobalNx;
+  //int ny = mesh->GlobalNy;
+  //int nz = mesh->GlobalNz;
+  int nx = mesh->LocalNx;
+  int ny = mesh->LocalNy;
+  int nz = mesh->LocalNz;
+  //int nz = mesh->LocalNz/2 + 1;
+
+///  a.resize(ny);
+///  b.resize(ny);
+///  c.resize(ny);
+///
+///  for(int jy=0;jy<ny;jy++){
+///    a[jy].resize(nx);
+///    b[jy].resize(nx);
+///    c[jy].resize(nx);
+///
+///    for(int jx=0;jx<nx;jx++){
+///      a[jy][jx].resize(nz);
+///      b[jy][jx].resize(nz);
+///      c[jy][jx].resize(nz);
+///      
+///    }
+///  }
+
+  // compute coefficients
+  for (int jy = 0; jy < ny; jy++) {
+    for (int jx = 0; jx < nx; jx++) {
+      for (int jz = 0; jz < nz; jz++) {
+        laplace_tridag_coefs(jx, jy, jz, a(jy, jx, jz), b(jy, jx, jz), c(jy, jx, jz), NULL, NULL);
+      }
+    }
+  }
+
+}
+
 /**********************************************************************************
  *                              LEGACY INTERFACE
  *

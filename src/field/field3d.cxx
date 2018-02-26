@@ -319,42 +319,42 @@ const IndexRange Field3D::region(REGION rgn) const {
   }
   };
 }
-const SingleDataIterator Field3D::sdi_region(REGION rgn) {
-  SCOREP0();
-  switch(rgn) {
-  case RGN_ALL: {
-    return SingleDataIterator(0, nx-1,
-                              0, ny-1,
-                              0, nz-1,
-			      nx, ny, nz, fieldmesh->region_map[rgn]);
-    break;
-  }
-  case RGN_NOBNDRY: {
-    return SingleDataIterator(fieldmesh->xstart, fieldmesh->xend,
-                              fieldmesh->ystart, fieldmesh->yend,
-                              0, nz-1,
-			      nx, ny, nz, fieldmesh->region_map[rgn]);
-    break;
-  }
-  case RGN_NOX: {
-    return SingleDataIterator(fieldmesh->xstart, fieldmesh->xend,
-                              0, ny-1,
-                              0, nz-1,
-			      nx, ny, nz, fieldmesh->region_map[rgn]);
-    break;
-  }
-  case RGN_NOY: {
-    return SingleDataIterator(0, nx-1,
-                              fieldmesh->ystart, fieldmesh->yend,
-                              0, nz-1,
-			      nx, ny, nz, fieldmesh->region_map[rgn]);
-    break;
-  }
-  default: {
-    throw BoutException("Field3D::region() : Requested region not implemented");
-  }
-  };
-}
+///const SingleDataIterator Field3D::sdi_region(REGION rgn) {
+///  SCOREP0();
+///  switch(rgn) {
+///  case RGN_ALL: {
+///    return SingleDataIterator(0, nx-1,
+///                              0, ny-1,
+///                              0, nz-1,
+///			      nx, ny, nz, fieldmesh->region_map[rgn]);
+///    break;
+///  }
+///  case RGN_NOBNDRY: {
+///    return SingleDataIterator(fieldmesh->xstart, fieldmesh->xend,
+///                              fieldmesh->ystart, fieldmesh->yend,
+///                              0, nz-1,
+///			      nx, ny, nz, fieldmesh->region_map[rgn]);
+///    break;
+///  }
+///  case RGN_NOX: {
+///    return SingleDataIterator(fieldmesh->xstart, fieldmesh->xend,
+///                              0, ny-1,
+///                              0, nz-1,
+///			      nx, ny, nz, fieldmesh->region_map[rgn]);
+///    break;
+///  }
+///  case RGN_NOY: {
+///    return SingleDataIterator(0, nx-1,
+///                              fieldmesh->ystart, fieldmesh->yend,
+///                              0, nz-1,
+///			      nx, ny, nz, fieldmesh->region_map[rgn]);
+///    break;
+///  }
+///  default: {
+///    throw BoutException("Field3D::region() : Requested region not implemented");
+///  }
+///  };
+///}
 
 /////////////////// ASSIGNMENT ////////////////////
 
