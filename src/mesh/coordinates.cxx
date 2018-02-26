@@ -4,43 +4,29 @@
  * given the contravariant metric tensor terms
  **************************************************************************/
 
+#include <bout/assert.hxx>
+#include <bout/constants.hxx>
 #include <bout/coordinates.hxx>
-#include <utils.hxx>
 #include <msg_stack.hxx>
 #include <output.hxx>
-#include <bout/constants.hxx>
-#include <bout/assert.hxx>
+#include <utils.hxx>
 
 #include <derivs.hxx>
-#include <interpolation.hxx>
 #include <fft.hxx>
+#include <interpolation.hxx>
 
 #include <globals.hxx>
 
-Coordinates::Coordinates(Mesh *mesh) {
-
-  dx = 1.0;
-  dy = 1.0;
-  dz = 1.0;
-
-  J = 1.0;
-  Bxy = 1.0;
-
-  // Identity metric tensor
-
-  g11 = 1.0;
-  g22 = 1.0;
-  g33 = 1.0;
-  g12 = 0.0;
-  g13 = 0.0;
-  g23 = 0.0;
-
-  g_11 = 1.0;
-  g_22 = 1.0;
-  g_33 = 1.0;
-  g_12 = 0.0;
-  g_13 = 0.0;
-  g_23 = 0.0;
+Coordinates::Coordinates(Mesh *mesh)
+    : dx(1, mesh), dy(1, mesh), dz(1), d1_dx(mesh), d1_dy(mesh), J(1, mesh), Bxy(1, mesh),
+      // Identity metric tensor
+      g11(1, mesh), g22(1, mesh), g33(1, mesh), g12(0, mesh), g13(0, mesh), g23(0, mesh),
+      g_11(1, mesh), g_22(1, mesh), g_33(1, mesh), g_12(0, mesh), g_13(0, mesh),
+      g_23(0, mesh), G1_11(mesh), G1_22(mesh), G1_33(mesh), G1_12(mesh), G1_13(mesh),
+      G1_23(mesh), G2_11(mesh), G2_22(mesh), G2_33(mesh), G2_12(mesh), G2_13(mesh),
+      G2_23(mesh), G3_11(mesh), G3_22(mesh), G3_33(mesh), G3_12(mesh), G3_13(mesh),
+      G3_23(mesh), G1(mesh), G2(mesh), G3(mesh), ShiftTorsion(mesh),
+      IntShiftTorsion(mesh), localmesh(mesh) {
 
   if (mesh->get(dx, "dx")) {
     output_warn.write("\tWARNING: differencing quantity 'dx' not found. Set to 1.0\n");
@@ -169,27 +155,6 @@ Coordinates::Coordinates(Mesh *mesh) {
     throw BoutException("Differential geometry failed\n");
   }
 
-  //////////////////////////////////////////////////////
-  /// Non-uniform meshes. Need to use DDX, DDY
-
-  OPTION(Options::getRoot(), non_uniform, false);
-
-  Field2D d2x, d2y; // d^2 x / d i^2
-  // Read correction for non-uniform meshes
-  if (mesh->get(d2x, "d2x")) {
-    output_warn.write("\tWARNING: differencing quantity 'd2x' not found. Calculating from dx\n");
-    d1_dx = mesh->indexDDX(1. / dx); // d/di(1/dx)
-  } else {
-    d1_dx = -d2x / (dx * dx);
-  }
-
-  if (mesh->get(d2y, "d2y")) {
-    output_warn.write("\tWARNING: differencing quantity 'd2y' not found. Calculating from dy\n");
-    d1_dy = mesh->indexDDY(1. / dy); // d/di(1/dy)
-  } else {
-    d1_dy = -d2y / (dy * dy);
-  }
-
   if (mesh->get(ShiftTorsion, "ShiftTorsion")) {
     output_warn.write("\tWARNING: No Torsion specified for zShift. Derivatives may not be correct\n");
     ShiftTorsion = 0.0;
@@ -278,10 +243,9 @@ int Coordinates::geometry() {
           0.5 * g13 * DDX(g_33);
   G1_23 = 0.5 * g11 * (DDZ(g_12) + DDY(g_13) - DDX(g_23)) +
           0.5 * g12 * (DDZ(g_22) + DDY(g_23) - DDY(g_23))
-              // + 0.5 *g13*(DDZ(g_32) + DDY(g_33) - DDZ(g_23));
-              // which equals
-          +
-          0.5 * g13 * DDY(g_33);
+          // + 0.5 *g13*(DDZ(g_32) + DDY(g_33) - DDZ(g_23));
+          // which equals
+          + 0.5 * g13 * DDY(g_33);
 
   G2_11 = 0.5 * g12 * DDX(g_11) + g22 * (DDX(g_12) - 0.5 * DDY(g_11)) +
           g23 * (DDX(g_13) - 0.5 * DDZ(g_11));
@@ -295,14 +259,12 @@ int Coordinates::geometry() {
       // 0.5 *g21*(DDZ(g_11) + DDX(g_13) - DDX(g_13))
       // which equals
       0.5 * g12 * (DDZ(g_11) + DDX(g_13) - DDX(g_13))
-          // + 0.5 *g22*(DDZ(g_21) + DDX(g_23) - DDY(g_13))
-          // which equals
-      +
-      0.5 * g22 * (DDZ(g_12) + DDX(g_23) - DDY(g_13))
-          // + 0.5 *g23*(DDZ(g_31) + DDX(g_33) - DDZ(g_13));
-          // which equals
-      +
-      0.5 * g23 * DDX(g_33);
+      // + 0.5 *g22*(DDZ(g_21) + DDX(g_23) - DDY(g_13))
+      // which equals
+      + 0.5 * g22 * (DDZ(g_12) + DDX(g_23) - DDY(g_13))
+      // + 0.5 *g23*(DDZ(g_31) + DDX(g_33) - DDZ(g_13));
+      // which equals
+      + 0.5 * g23 * DDX(g_33);
   G2_23 = 0.5 * g12 * (DDZ(g_12) + DDY(g_13) - DDX(g_23)) + 0.5 * g22 * DDZ(g_22) +
           0.5 * g23 * DDY(g_33);
 
@@ -316,14 +278,12 @@ int Coordinates::geometry() {
       // 0.5 *g31*(DDY(g_11) + DDX(g_12) - DDX(g_12))
       // which equals to
       0.5 * g13 * DDY(g_11)
-          // + 0.5 *g32*(DDY(g_21) + DDX(g_22) - DDY(g_12))
-          // which equals to
-      +
-      0.5 * g23 * DDX(g_22)
-          //+ 0.5 *g33*(DDY(g_31) + DDX(g_32) - DDZ(g_12));
-          // which equals to
-      +
-      0.5 * g33 * (DDY(g_13) + DDX(g_23) - DDZ(g_12));
+      // + 0.5 *g32*(DDY(g_21) + DDX(g_22) - DDY(g_12))
+      // which equals to
+      + 0.5 * g23 * DDX(g_22)
+      //+ 0.5 *g33*(DDY(g_31) + DDX(g_32) - DDZ(g_12));
+      // which equals to
+      + 0.5 * g33 * (DDY(g_13) + DDX(g_23) - DDZ(g_12));
   G3_13 = 0.5 * g13 * DDZ(g_11) + 0.5 * g23 * (DDZ(g_12) + DDX(g_23) - DDY(g_13)) +
           0.5 * g33 * DDX(g_33);
   G3_23 = 0.5 * g13 * (DDZ(g_12) + DDY(g_13) - DDX(g_23)) + 0.5 * g23 * DDZ(g_22) +
@@ -363,7 +323,30 @@ int Coordinates::geometry() {
   com.add(G2);
   com.add(G3);
 
-  mesh->communicate(com);
+  localmesh->communicate(com);
+
+  //////////////////////////////////////////////////////
+  /// Non-uniform meshes. Need to use DDX, DDY
+
+  OPTION(Options::getRoot(), non_uniform, false);
+
+  Field2D d2x, d2y; // d^2 x / d i^2
+  // Read correction for non-uniform meshes
+  if (localmesh->get(d2x, "d2x")) {
+    output_warn.write(
+        "\tWARNING: differencing quantity 'd2x' not found. Calculating from dx\n");
+    d1_dx = localmesh->indexDDX(1. / dx); // d/di(1/dx)
+  } else {
+    d1_dx = -d2x / (dx * dx);
+  }
+
+  if (localmesh->get(d2y, "d2y")) {
+    output_warn.write(
+        "\tWARNING: differencing quantity 'd2y' not found. Calculating from dy\n");
+    d1_dy = localmesh->indexDDY(1. / dy); // d/di(1/dy)
+  } else {
+    d1_dy = -d2y / (dy * dy);
+  }
 
   return 0;
 }
@@ -382,42 +365,40 @@ int Coordinates::calcCovariant() {
   // Perform inversion of g^{ij} to get g_{ij}
   // NOTE: Currently this bit assumes that metric terms are Field2D objects
 
-  BoutReal **a = matrix<BoutReal>(3, 3);
+  auto a = Matrix<BoutReal>(3, 3);
 
-  for (int jx = 0; jx < mesh->LocalNx; jx++) {
-    for (int jy = 0; jy < mesh->LocalNy; jy++) {
+  for (int jx = 0; jx < localmesh->LocalNx; jx++) {
+    for (int jy = 0; jy < localmesh->LocalNy; jy++) {
       // set elements of g
-      a[0][0] = g11(jx, jy);
-      a[1][1] = g22(jx, jy);
-      a[2][2] = g33(jx, jy);
+      a(0, 0) = g11(jx, jy);
+      a(1, 1) = g22(jx, jy);
+      a(2, 2) = g33(jx, jy);
 
-      a[0][1] = a[1][0] = g12(jx, jy);
-      a[1][2] = a[2][1] = g23(jx, jy);
-      a[0][2] = a[2][0] = g13(jx, jy);
+      a(0, 1) = a(1, 0) = g12(jx, jy);
+      a(1, 2) = a(2, 1) = g23(jx, jy);
+      a(0, 2) = a(2, 0) = g13(jx, jy);
 
       // invert
-      if (gaussj(a, 3)) {
+      if (invert3x3(a)) {
         output_error.write("\tERROR: metric tensor is singular at (%d, %d)\n", jx, jy);
         return 1;
       }
 
       // put elements into g_{ij}
-      g_11(jx, jy) = a[0][0];
-      g_22(jx, jy) = a[1][1];
-      g_33(jx, jy) = a[2][2];
+      g_11(jx, jy) = a(0, 0);
+      g_22(jx, jy) = a(1, 1);
+      g_33(jx, jy) = a(2, 2);
 
-      g_12(jx, jy) = a[0][1];
-      g_13(jx, jy) = a[0][2];
-      g_23(jx, jy) = a[1][2];
+      g_12(jx, jy) = a(0, 1);
+      g_13(jx, jy) = a(0, 2);
+      g_23(jx, jy) = a(1, 2);
     }
   }
 
-  free_matrix(a);
-
   BoutReal maxerr;
-  maxerr= BOUTMAX(max(abs((g_11 * g11 + g_12 * g12 + g_13 * g13) - 1)),
-                  max(abs((g_12 * g12 + g_22 * g22 + g_23 * g23) - 1)),
-                  max(abs((g_13 * g13 + g_23 * g23 + g_33 * g33) - 1)));
+  maxerr = BOUTMAX(max(abs((g_11 * g11 + g_12 * g12 + g_13 * g13) - 1)),
+                   max(abs((g_12 * g12 + g_22 * g22 + g_23 * g23) - 1)),
+                   max(abs((g_13 * g13 + g_23 * g23 + g_33 * g33) - 1)));
 
   output_info.write("\tLocal maximum error in diagonal inversion is %e\n", maxerr);
 
@@ -444,37 +425,35 @@ int Coordinates::calcContravariant() {
   // Perform inversion of g_{ij} to get g^{ij}
   // NOTE: Currently this bit assumes that metric terms are Field2D objects
 
-  BoutReal **a = matrix<BoutReal>(3, 3);
+  auto a = Matrix<BoutReal>(3, 3);
 
-  for (int jx = 0; jx < mesh->LocalNx; jx++) {
-    for (int jy = 0; jy < mesh->LocalNy; jy++) {
+  for (int jx = 0; jx < localmesh->LocalNx; jx++) {
+    for (int jy = 0; jy < localmesh->LocalNy; jy++) {
       // set elements of g
-      a[0][0] = g_11(jx, jy);
-      a[1][1] = g_22(jx, jy);
-      a[2][2] = g_33(jx, jy);
+      a(0, 0) = g_11(jx, jy);
+      a(1, 1) = g_22(jx, jy);
+      a(2, 2) = g_33(jx, jy);
 
-      a[0][1] = a[1][0] = g_12(jx, jy);
-      a[1][2] = a[2][1] = g_23(jx, jy);
-      a[0][2] = a[2][0] = g_13(jx, jy);
+      a(0, 1) = a(1, 0) = g_12(jx, jy);
+      a(1, 2) = a(2, 1) = g_23(jx, jy);
+      a(0, 2) = a(2, 0) = g_13(jx, jy);
 
       // invert
-      if (gaussj(a, 3)) {
+      if (invert3x3(a)) {
         output_error.write("\tERROR: metric tensor is singular at (%d, %d)\n", jx, jy);
         return 1;
       }
 
       // put elements into g_{ij}
-      g11(jx, jy) = a[0][0];
-      g22(jx, jy) = a[1][1];
-      g33(jx, jy) = a[2][2];
+      g11(jx, jy) = a(0, 0);
+      g22(jx, jy) = a(1, 1);
+      g33(jx, jy) = a(2, 2);
 
-      g12(jx, jy) = a[0][1];
-      g13(jx, jy) = a[0][2];
-      g23(jx, jy) = a[1][2];
+      g12(jx, jy) = a(0, 1);
+      g13(jx, jy) = a(0, 2);
+      g23(jx, jy) = a(1, 2);
     }
   }
-
-  free_matrix(a);
 
   BoutReal maxerr;
   maxerr = BOUTMAX(max(abs((g_11 * g11 + g_12 * g12 + g_13 * g13) - 1)),
@@ -525,11 +504,13 @@ int Coordinates::jacobian() {
  *
  *******************************************************************************/
 
-const Field2D Coordinates::DDX(const Field2D &f) { return mesh->indexDDX(f) / dx; }
+const Field2D Coordinates::DDX(const Field2D &f) { return localmesh->indexDDX(f) / dx; }
 
-const Field2D Coordinates::DDY(const Field2D &f) { return mesh->indexDDY(f) / dy; }
+const Field2D Coordinates::DDY(const Field2D &f) { return localmesh->indexDDY(f) / dy; }
 
-const Field2D Coordinates::DDZ(const Field2D &UNUSED(f)) { return Field2D(0.0); }
+const Field2D Coordinates::DDZ(const Field2D &UNUSED(f)) {
+  return Field2D(0.0, localmesh);
+}
 
 #include <derivs.hxx>
 
@@ -560,7 +541,7 @@ const Field2D Coordinates::Vpar_Grad_par(const Field2D &v, const Field2D &f,
   return VDDY(v, f) / sqrt(g_22);
 }
 
-const Field3D Coordinates::Vpar_Grad_par(const Field &v, const Field &f, CELL_LOC outloc,
+const Field3D Coordinates::Vpar_Grad_par(const Field3D &v, const Field3D &f, CELL_LOC outloc,
                                          DIFF_METHOD method) {
   return VDDY(v, f, outloc, method) / sqrt(g_22);
 }
@@ -614,13 +595,13 @@ const Field2D Coordinates::Grad2_par2(const Field2D &f) {
 const Field3D Coordinates::Grad2_par2(const Field3D &f, CELL_LOC outloc) {
   TRACE("Coordinates::Grad2_par2( Field3D )");
 
-  Field2D sg;
-  Field3D result, r2;
+  Field2D sg(localmesh);
+  Field3D result(localmesh), r2(localmesh);
 
   sg = sqrt(g_22);
   sg = DDY(1. / sg) / sg;
   if (sg.getLocation() != outloc) {
-    mesh->communicate(sg);
+    localmesh->communicate(sg);
     sg = interp_to(sg, outloc);
   }
 
@@ -648,56 +629,53 @@ const Field2D Coordinates::Delp2(const Field2D &f) {
 
 const Field3D Coordinates::Delp2(const Field3D &f) {
   TRACE("Coordinates::Delp2( Field3D )");
-  
-  ASSERT2(mesh->xstart > 0); // Need at least one guard cell
 
-  Field3D result;
+  ASSERT2(localmesh->xstart > 0); // Need at least one guard cell
+
+  Field3D result(localmesh);
   result.allocate();
 
-  int ncz = mesh->LocalNz;
+  int ncz = localmesh->LocalNz;
 
-  static dcomplex **ft = (dcomplex **)NULL, **delft;
-  if (ft == (dcomplex **)NULL) {
-    // Allocate memory
-    ft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
-    delft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
-  }
+  // Allocate memory
+  auto ft = Matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
+  auto delft = Matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
 
   // Loop over all y indices
-  for (int jy = 0; jy < mesh->LocalNy; jy++) {
+  for (int jy = 0; jy < localmesh->LocalNy; jy++) {
 
     // Take forward FFT
 
-    for (int jx = 0; jx < mesh->LocalNx; jx++)
-      rfft(&f(jx, jy, 0), ncz, ft[jx]);
+    for (int jx = 0; jx < localmesh->LocalNx; jx++)
+      rfft(&f(jx, jy, 0), ncz, &ft(jx, 0));
 
     // Loop over kz
     for (int jz = 0; jz <= ncz / 2; jz++) {
       dcomplex a, b, c;
 
       // No smoothing in the x direction
-      for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
+      for (int jx = localmesh->xstart; jx <= localmesh->xend; jx++) {
         // Perform x derivative
 
         laplace_tridag_coefs(jx, jy, jz, a, b, c);
 
-        delft[jx][jz] = a * ft[jx - 1][jz] + b * ft[jx][jz] + c * ft[jx + 1][jz];
+        delft(jx, jz) = a * ft(jx - 1, jz) + b * ft(jx, jz) + c * ft(jx + 1, jz);
       }
     }
 
     // Reverse FFT
-    for (int jx = mesh->xstart; jx <= mesh->xend; jx++) {
+    for (int jx = localmesh->xstart; jx <= localmesh->xend; jx++) {
 
-      irfft(delft[jx], ncz, &result(jx, jy, 0));
+      irfft(&delft(jx, 0), ncz, &result(jx, jy, 0));
     }
 
     // Boundaries
     for (int jz = 0; jz < ncz; jz++) {
-      for (int jx = 0; jx<mesh->xstart; jx++) {
-	result(jx, jy, jz) = 0.0;
+      for (int jx = 0; jx < localmesh->xstart; jx++) {
+        result(jx, jy, jz) = 0.0;
       }
-      for (int jx = mesh->xend+1; jx<mesh->LocalNx; jx++) {
-	result(jx, jy, jz) = 0.0;
+      for (int jx = localmesh->xend + 1; jx < localmesh->LocalNx; jx++) {
+        result(jx, jy, jz) = 0.0;
       }
     }
   }
@@ -711,49 +689,45 @@ const Field3D Coordinates::Delp2(const Field3D &f) {
 const FieldPerp Coordinates::Delp2(const FieldPerp &f) {
   TRACE("Coordinates::Delp2( FieldPerp )");
 
-  FieldPerp result;
+  FieldPerp result(localmesh);
   result.allocate();
-
-  static dcomplex **ft = (dcomplex **)NULL, **delft;
 
   int jy = f.getIndex();
   result.setIndex(jy);
 
-  int ncz = mesh->LocalNz;
+  int ncz = localmesh->LocalNz;
 
-  if (ft == (dcomplex **)NULL) {
-    // Allocate memory
-    ft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
-    delft = matrix<dcomplex>(mesh->LocalNx, ncz / 2 + 1);
-  }
+  // Allocate memory
+  auto ft = Matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
+  auto delft = Matrix<dcomplex>(localmesh->LocalNx, ncz / 2 + 1);
 
   // Take forward FFT
-  for (int jx = 0; jx < mesh->LocalNx; jx++)
-    rfft(f[jx], ncz, ft[jx]);
+  for (int jx = 0; jx < localmesh->LocalNx; jx++)
+    rfft(&f(jx, 0), ncz, &ft(jx, 0));
 
   // Loop over kz
   for (int jz = 0; jz <= ncz / 2; jz++) {
 
     // No smoothing in the x direction
-    for (int jx = 2; jx < (mesh->LocalNx - 2); jx++) {
+    for (int jx = 2; jx < (localmesh->LocalNx - 2); jx++) {
       // Perform x derivative
 
       dcomplex a, b, c;
       laplace_tridag_coefs(jx, jy, jz, a, b, c);
 
-      delft[jx][jz] = a * ft[jx - 1][jz] + b * ft[jx][jz] + c * ft[jx + 1][jz];
+      delft(jx, jz) = a * ft(jx - 1, jz) + b * ft(jx, jz) + c * ft(jx + 1, jz);
     }
   }
 
   // Reverse FFT
-  for (int jx = 1; jx < (mesh->LocalNx - 1); jx++) {
-    irfft(delft[jx], ncz, result[jx]);
+  for (int jx = 1; jx < (localmesh->LocalNx - 1); jx++) {
+    irfft(&delft(jx, 0), ncz, &result(jx, 0));
   }
 
   // Boundaries
   for (int jz = 0; jz < ncz; jz++) {
     result(0, jz) = 0.0;
-    result(mesh->LocalNx - 1, jz) = 0.0;
+    result(localmesh->LocalNx - 1, jz) = 0.0;
   }
 
   return result;
@@ -786,86 +760,4 @@ const Field3D Coordinates::Laplace(const Field3D &f) {
                    2.0 * (g12 * D2DXDY(f) + g13 * D2DXDZ(f) + g23 * D2DYDZ(f));
 
   return result;
-}
-
-/*******************************************************************************
- * Gauss-Jordan matrix inversion
- * used to invert metric tensor
- *******************************************************************************/
-
-// Invert an nxn matrix using Gauss-Jordan elimination with full pivoting
-int Coordinates::gaussj(BoutReal **a, int n) {
-  TRACE("Coordinates::gaussj");
-
-  int i, icol, irow, j, k, l, ll;
-  BoutReal big, dum, pivinv;
-
-  // Make sure enough temporary memory is allocated
-  indxc.resize(n);
-  indxr.resize(n);
-  ipiv.resize(n);
-
-  for (i = 0; i < n; i++)
-    ipiv[i] = 0;
-
-  for (i = 0; i < n; i++) { // Main loop over columns
-    big = 0.0;
-    irow = icol = -1;
-    for (j = 0; j < n; j++) { // search for pivot element
-      if (ipiv[j] != 1) {
-        for (k = 0; k < n; k++) {
-          if (ipiv[k] == 0) {
-            if (fabs(a[j][k]) >= big) {
-              big = fabs(a[j][k]);
-              irow = j;
-              icol = k;
-            }
-          } else if (ipiv[k] > 1) {
-            throw BoutException("Error in GaussJ: Singular matrix-1\n");
-          }
-        }
-      }
-    }
-
-    if (irow == -1) {
-      // All elements zero!!
-      throw BoutException("Error in GaussJ: Singular matrix-3\n");
-    }
-
-    ++(ipiv[icol]);
-    // Now have pivot element, so interchange rows to put pivot
-    // on the diagonal
-    if (irow != icol) {
-      for (l = 0; l < n; l++)
-        swap(a[irow][l], a[icol][l]);
-    }
-    indxr[i] = irow;
-    indxc[i] = icol;
-
-    if (a[icol][icol] == 0.0) {
-      throw BoutException("Error in GaussJ: Singular matrix-2\n");
-    }
-    pivinv = 1.0 / a[icol][icol];
-    a[icol][icol] = 1.0;
-    for (l = 0; l < n; l++)
-      a[icol][l] *= pivinv;
-
-    for (ll = 0; ll < n; ll++) { // reduce rows
-      if (ll != icol) {          // except for the pivot one
-        dum = a[ll][icol];
-        a[ll][icol] = 0.0;
-        for (l = 0; l < n; l++)
-          a[ll][l] -= a[icol][l] * dum;
-      }
-    }
-  }
-  // end of main loop. Unscramble solution due to column interchanges
-  for (l = n - 1; l >= 0; l--) {
-    if (indxr[l] != indxc[l])
-      for (k = 0; k < n; k++)
-        swap(a[k][indxr[l]], a[k][indxc[l]]);
-  }
-  // done.
-
-  return 0;
 }

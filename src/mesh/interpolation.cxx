@@ -56,46 +56,140 @@ const Field3D interp_to(const Field3D &var, CELL_LOC loc)
     // Staggered grids enabled, and need to perform interpolation
     TRACE("Interpolating %s -> %s", strLocation(var.getLocation()), strLocation(loc));
 
-    Field3D result;
+    Field3D result(var.getMesh());
 
     result = var; // NOTE: This is just for boundaries. FIX!
     result.allocate();
+
+    // Cell location of the input field
+    CELL_LOC location = var.getLocation();
     
-    if((var.getLocation() == CELL_CENTRE) || (loc == CELL_CENTRE)) {
+    if((location == CELL_CENTRE) || (loc == CELL_CENTRE)) {
       // Going between centred and shifted
       
-      bindex bx;
       stencil s;
       CELL_LOC dir; 
       
       // Get the non-centre location for interpolation direction
-      dir = (loc == CELL_CENTRE) ? var.getLocation() : loc;
+      dir = (loc == CELL_CENTRE) ? location : loc;
 
       switch(dir) {
       case CELL_XLOW: {
-	start_index(&bx, RGN_NOX);
-	do {
-	  var.setXStencil(s, bx, loc);
-	  result(bx.jx,bx.jy,bx.jz) = interp(s);
-	}while(next_index3(&bx));
+        for(const auto &i : result.region(RGN_NOX)) {
+
+	  // Set stencils
+	  s.c = var[i];
+	  s.p = var[i.xp()];
+	  s.m = var[i.xm()];
+	  s.pp = var[i.offset(2,0,0)];
+	  s.mm = var[i.offset(-2,0,0)];
+	  
+	  if ((location == CELL_CENTRE) && (loc == CELL_XLOW)) {
+	    // Producing a stencil centred around a lower X value
+	    s.pp = s.p;
+	    s.p  = s.c;
+	  } else if (location == CELL_XLOW) {
+	    // Stencil centred around a cell centre
+	    s.mm = s.m;
+	    s.m  = s.c;
+	  }
+
+	  result[i] = interp(s);
+	}
 	break;
 	// Need to communicate in X
       }
       case CELL_YLOW: {
-	start_index(&bx, RGN_NOY);
-	do {
-	  var.setYStencil(s, bx, loc);
-	  result(bx.jx,bx.jy,bx.jz) = interp(s);
-	}while(next_index3(&bx));
+	if (var.hasYupYdown() && 
+	    ( (&var.yup() != &var) || (&var.ydown() != &var))) {
+	  // Field "var" has distinct yup and ydown fields which
+	  // will be used to calculate a derivative along 
+	  // the magnetic field
+	  s.pp = nan("");
+	  s.mm = nan("");
+          for(const auto &i : result.region(RGN_NOY)) {
+	    // Set stencils
+	    s.c = var[i];
+	    s.p = var.yup()[i.yp()];
+	    s.m = var.ydown()[i.ym()];
+	    
+	    if ((location == CELL_CENTRE) && (loc == CELL_YLOW)) {
+	      // Producing a stencil centred around a lower Y value
+	      s.pp = s.p;
+	      s.p  = s.c;
+	    } else if(location == CELL_YLOW) {
+	      // Stencil centred around a cell centre
+	      s.mm = s.m;
+	      s.m  = s.c;
+	    }
+
+	    result[i] = interp(s);
+	  }
+	}
+	else {
+	  // var has no yup/ydown fields, so we need to shift into field-aligned coordinates
+	  
+	  Field3D var_fa = mesh->toFieldAligned(var);
+	  if (mesh->ystart > 1) {
+	  // More than one guard cell, so set pp and mm values
+	  // This allows higher-order methods to be used
+          for(const auto &i : result.region(RGN_NOY)) {
+	    // Set stencils
+	    s.c = var_fa[i];
+	    s.p = var_fa[i.yp()];
+	    s.m = var_fa[i.ym()];
+	    s.pp = var_fa[i.offset(0,2,0)];
+	    s.mm = var_fa[i.offset(0,-2,0)];
+	    
+	    if ((location == CELL_CENTRE) && (loc == CELL_YLOW)) {
+	      // Producing a stencil centred around a lower Y value
+	      s.pp = s.p;
+	      s.p  = s.c;
+	    } else if(location == CELL_YLOW) {
+	      // Stencil centred around a cell centre
+	      s.mm = s.m;
+	      s.m  = s.c;
+	    }
+	    
+	    result[i] = interp(s);
+	  }
+	  } else {
+	    // Only one guard cell, so no pp or mm values
+	    s.pp = nan("");
+	    s.mm = nan("");
+            for(const auto &i : result.region(RGN_NOY)) {
+	      // Set stencils
+	      s.c = var_fa[i];
+	      s.p = var_fa[i.yp()];
+	      s.m = var_fa[i.ym()];
+	      
+	      if ((location == CELL_CENTRE) && (loc == CELL_YLOW)) {
+		// Producing a stencil centred around a lower Y value
+		s.pp = s.p;
+		s.p  = s.c;
+	      } else if(location == CELL_YLOW) {
+		// Stencil centred around a cell centre
+		s.mm = s.m;
+		s.m  = s.c;
+	      }
+	      
+	      result[i] = interp(s);
+	    }
+	  }
+	}
 	break;
 	// Need to communicate in Y
       }
       case CELL_ZLOW: {
-	start_index(&bx, RGN_NOZ);
-	do {
-	  var.setZStencil(s, bx, loc);
-	  result(bx.jx,bx.jy,bx.jz) = interp(s);
-	}while(next_index3(&bx));
+        for(const auto &i : result.region(RGN_NOZ)) {
+	  s.c = var[i];
+	  s.p = var[i.zp()];
+	  s.m = var[i.zm()];
+	  s.pp = var[i.offset(0,0,2)];
+	  s.mm = var[i.offset(0,0,-2)];
+	  
+	  result[i] = interp(s);
+	}
 	break;
       }
       default: {
@@ -176,7 +270,10 @@ const Field3D interpolate(const Field3D &f, const Field3D &delta_x,
                           const Field3D &delta_z) {
   TRACE("Interpolating 3D field");
 
-  Field3D result;
+  Mesh *mesh = f.getMesh();
+  ASSERT1(mesh == delta_x.getMesh());
+  ASSERT1(mesh == delta_z.getMesh());
+  Field3D result(mesh);
   result.allocate();
 
   // Loop over output grid points
@@ -246,7 +343,9 @@ const Field3D interpolate(const Field2D &f, const Field3D &delta_x, const Field3
 const Field3D interpolate(const Field2D &f, const Field3D &delta_x) {
   TRACE("interpolate(Field2D, Field3D)");
 
-  Field3D result;
+  Mesh *mesh = f.getMesh();
+  ASSERT1(mesh == delta_x.getMesh());
+  Field3D result(mesh);
   result.allocate();
 
   // Loop over output grid points

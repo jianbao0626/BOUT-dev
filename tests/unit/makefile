@@ -25,7 +25,10 @@ CXXFLAGS += -g -Wall -Wextra -pthread
 GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
                 $(GTEST_DIR)/include/gtest/internal/*.h
 
+all:  serial_tests
 include $(BOUT_TOP)/make.config
+
+LDFLAGS += -pthread
 
 # Existence of this file indicates that GTEST has been downloaded
 GTEST_SENTINEL = $(BOUT_TOP)/googletest/README.md
@@ -56,7 +59,7 @@ gtest-all.o : $(GTEST_SENTINEL)
 	@$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
             $(GTEST_DIR)/src/gtest-all.cc
 
-bout_test_main.o : $(TEST_SENTINEL) $(BOUT_TEST_DIR)/bout_test_main.cxx
+bout_test_main.o : $(GTEST_SENTINEL) $(BOUT_TEST_DIR)/bout_test_main.cxx
 	@echo "  Compiling" $@
 	@$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(BOUT_INCLUDE) $(BOUT_FLAGS) -c $(@:.o=.cxx)
 
@@ -76,7 +79,7 @@ TEST_SOURCES = $(shell find $(BOUT_TEST_DIR) -type f -name "test_*.cxx" 2> /dev/
 TEST_OBJECTS = $(TEST_SOURCES:%.cxx=%.o)
 
 $(TEST_SOURCES): checklib
-$(TEST_OBJECTS): $(LIB)
+$(TEST_OBJECTS): $(LIB) $(GTEST_SENTINEL)
 
 serial_tests: makefile $(BOUT_TOP)/make.config $(OBJ) $(LIB) $(SUB_LIBS) $(TEST_OBJECTS) bout_test_main.a
 	@echo "  Linking tests"

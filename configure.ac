@@ -32,7 +32,7 @@
 #
 
 AC_PREREQ(2.59)
-AC_INIT(BOUT++, 4.1.1, bd512@york.ac.uk)
+AC_INIT(BOUT++, 4.1.2, bd512@york.ac.uk)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -61,7 +61,7 @@ AC_ARG_WITH(mumps,        [AS_HELP_STRING([--with-mumps],
 AC_ARG_WITH(arkode,       [AS_HELP_STRING([--with-arkode],
         [Use the SUNDIALS ARKODE solver])],,[])
 AC_ARG_WITH(scorep,       [AS_HELP_STRING([--with-scorep],
-        [Enable support for scorep based instrumentation])],,[])
+        [Enable support for scorep based instrumentation])],,[with_scorep=no])
 
 dnl --with-hdf5 flags are set in AX_LIB_{PARALLEL}HDF5
 
@@ -80,7 +80,11 @@ AC_ARG_ENABLE(optimize,     [AS_HELP_STRING([--enable-optimize=1/2/3],
 AC_ARG_ENABLE(sigfpe,       [AS_HELP_STRING([--enable-sigfpe],
         [Enable FloatingPointExceptions])],,[])
 AC_ARG_ENABLE(backtrace,    [AS_HELP_STRING([--disable-backtrace],
-        [Disable function backtrace])],,[enable_backtrace=yes])
+        [Disable function backtrace])],,[enable_backtrace=maybe])
+AC_ARG_ENABLE(shared,       [AS_HELP_STRING([--enable-shared],
+        [Enable building bout++ into an shared object])],,[enable_shared=no])
+AC_ARG_ENABLE(pvode_openmp,       [AS_HELP_STRING([--enable-pvode-openmp],
+        [Enable building PVODE with OpenMP support])],,[enable_pvode_openmp=no])
 
 AC_ARG_VAR(EXTRA_INCS,[Extra compile flags])
 AC_ARG_VAR(EXTRA_LIBS,[Extra linking flags])
@@ -206,7 +210,7 @@ elif test $enable_optimize ; then
       OPT_FLAGS="-O"
     elif test $optimize == "fast"
     then
-      OPT_FLAGS="-Ofast -march=native -funroll-loops"
+      OPT_FLAGS="-Ofast -fno-finite-math-only -march=native -funroll-loops"
       DISABLE_CHECK=probably
     else
       AC_MSG_ERROR([unrecognized option: --enable-optimize=$optimize])
@@ -214,7 +218,7 @@ elif test $enable_optimize ; then
   else
     if test $optimize -gt 3
     then
-      OPT_FLAGS="-Ofast -march=native -funroll-loops"
+      OPT_FLAGS="-Ofast -fno-finite-math-only -march=native -funroll-loops"
       DISABLE_CHECK=probably
     elif test $optimize -gt 2
     then
@@ -308,18 +312,54 @@ CXXFLAGS+=" -DBOUT_VERSION_STRING=\"\\\"$BOUT_VERSION\\\"\" -DBOUT_VERSION_DOUBL
 # Enable Backtrace if possible
 #############################################################
 
-if test ."$enable_backtrace" == .yes
+if test ."$enable_backtrace" == .yes || test ."$enable_backtrace" == .maybe
 then
-    if which addr2line &>/dev/null
+    works=yes
+    if ! which addr2line &>/dev/null
     then
-        AC_CHECK_FUNC(popen,
-                      [AC_TRY_COMPILE([#include <execinfo.h>] ,,
-                                      [AC_TRY_LINK([extern "C"
-                                                    char backtrace();] ,
-                                                   [return backtrace();],
-                                                   [CXXFLAGS="$CXXFLAGS -DBACKTRACE"]);
-                                      ])])
+        AC_MSG_WARN("util addr2line not found")
+        works=no
     fi
+    AC_CHECK_FUNC(popen, , [works=no])
+    AC_TRY_COMPILE([#include <execinfo.h>] , , ,
+                   [AC_MSG_WARN("execinfo.h not found")
+                    works=no])
+    AC_TRY_LINK([extern "C"
+                 char backtrace();] ,
+                 [return backtrace();], ,
+                 [AC_MSG_WARN("backtrace function not found")
+                  works=no])
+    AC_TRY_COMPILE([#include <dlfcn.h>] , , ,
+                   [AC_MSG_WARN("dlfcn.h not found")
+                    works=no])
+    if test .$works == .yes
+    then
+        CXXFLAGS="$CXXFLAGS -DBACKTRACE"
+    else
+        if test ."$enable_backtrace" == .yes
+        then
+            AC_MSG_ERROR([backtrace requested, but cannot be enabled])
+        else
+            AC_MSG_WARN("backtrace disabled")
+        fi
+    fi
+fi
+
+#############################################################
+# Build into shared object (pic)
+#############################################################
+
+if test ."$enable_shared" == .yes
+then
+    # compile as position independent code.
+    # -fpic is apparently faster then -fPIC, but -fPIC works always.
+    # From a SO comment (https://stackoverflow.com/a/3544211/3384414):
+    #  What's more: I did a little experiment here (on x86_64
+    #  platform), -fPIC and -fpic appears to have generated the same
+    #  code. It seems they generate a different code only on m68k,
+    #  PowerPC and SPARC.
+    # Therfore use -fPIC for now
+    CXXFLAGS+=" -fPIC"
 fi
 
 #############################################################
@@ -329,7 +369,7 @@ fi
 rev=`git rev-parse HEAD`
 if test "$?" = "0"
 then
-  # Attach revision info to flags
+  dnl Revision not needed for build - is checked at compile time.
   dnl CXXFLAGS="$CXXFLAGS -DREVISION=$rev"
   echo "Revision ID: $rev"
 fi
@@ -371,29 +411,28 @@ AS_IF([test "x$with_netcdf" != "xno"],
   # check the path provided by --with-netcdf, appending "/bin" if need
   # be, then check system path
   # Set NCCONF to the full path of the found scropt
-  AS_CASE([`basename $with_netcdf`],
+  AS_CASE([`basename $with_netcdf 2> /dev/null`],
     ["ncxx4-config"], [NCCONF=$with_netcdf],
     ["nc-config"], [NCCONF=$with_netcdf],
-    [AC_PATH_PROGS([NCCONF], [ncxx4-config nc-config],
-       [AC_MSG_ERROR([No configure script found. Specify path using --with-netcdf option])],
+    [AC_PATH_PROGS([NCCONF], [ncxx4-config nc-config], [],
        [$with_netcdf$PATH_SEPARATOR$with_netcdf/bin$PATH_SEPARATOR$PATH])])
-
-  # If we found nc-config rather than ncxx4-config, we need to check if it supports C++
-  AS_IF([test `basename $NCCONF` = 'nc-config'],
-        [AC_MSG_CHECKING([if $NCCONF has C++4 support])
-         nc_has_cpp4=`$NCCONF --has-c++4`
-         AC_MSG_RESULT([$nc_has_cpp4])
-         AC_MSG_CHECKING([if $NCCONF has C++ support])
-         nc_has_cpp=`$NCCONF --has-c++`
-         AC_MSG_RESULT([$nc_has_cpp])
-        ], [
-         nc_has_cpp4="yes"
-        ])
 
   ##########################################
   # Get configuration
   AS_IF([test "x$NCCONF" != "x" ],
   [
+     # If we found nc-config rather than ncxx4-config, we need to check if it supports C++
+     AS_IF([test `basename $NCCONF` = 'nc-config'],
+           [AC_MSG_CHECKING([if $NCCONF has C++4 support])
+            nc_has_cpp4=`$NCCONF --has-c++4`
+            AC_MSG_RESULT([$nc_has_cpp4])
+            AC_MSG_CHECKING([if $NCCONF has C++ support])
+            nc_has_cpp=`$NCCONF --has-c++`
+            AC_MSG_RESULT([$nc_has_cpp])
+           ], [
+            nc_has_cpp4="yes"
+           ])
+
      NCINC=`$NCCONF --cflags`
      EXTRA_INCS="$EXTRA_INCS $NCINC"
      AS_IF([test "x$nc_has_cpp4" = "xyes"],
@@ -482,17 +521,6 @@ then
     if test "$path" != ""
     then
       path=`dirname $path`
-      path=$path/..
-      AC_CHECK_FILES($path/include/pnetcdf.h , PNCPATH=$path,)
-    fi
-  fi
-
-  # Try locate
-  if test "$PNCPATH" == ""
-  then
-    path=`locate pnetcdf.h | head -n 1`
-    if test "$path" != ""
-    then
       path=$path/..
       AC_CHECK_FILES($path/include/pnetcdf.h , PNCPATH=$path,)
     fi
@@ -1153,7 +1181,7 @@ HAS_SCOREP="no"
 AS_IF([test "$with_scorep" != "no"], [
   AC_MSG_NOTICE(["Searching for Scorep executable"])
 
-  AS_IF([test "$with_scorep" != ""], [
+  AS_IF([test "$with_scorep" != "yes"], [
     # Given a path to the library
     AC_CHECK_FILES($with_scorep/scorep, SCOREPPATH=$with_scorep,)
     AS_IF([test "$SCOREPPATH" == ""],[
@@ -1172,7 +1200,6 @@ AS_IF([test "$with_scorep" != "no"], [
       ], [])
   ],
   [])
-
 
   AS_IF([test "$SCOREPPATH" == ""], [
       AC_MSG_NOTICE(["SCOREP support disabled"])
@@ -1202,8 +1229,18 @@ AS_MKDIR_P(include)
 HAS_PVODE="no"
 if ( test "$with_pvode" != "no" )
 then
+	AS_IF([test "$enable_pvode_openmp" != "no"  ],[
+	      AS_IF([test "$enable_openmp" != "no" ],[
+    	               PVODE_FLAGS="$CXXFLAGS $OPENMP_CXXFLAGS $CXX11_FLAGS"
+		       AC_MSG_NOTICE([PVODE being built with OpenMP support])
+		    ],[
+		       AC_MSG_ERROR([Cannot enable openmp in PVODE as configuring with OpenMP disabled])
+		       ])
+	      ],[
+	         PVODE_FLAGS="$CXXFLAGS $CXX11_FLAGS"
+	         AC_MSG_NOTICE([PVODE being built without OpenMP support])
+	])
 
-   PVODE_FLAGS="$CXXFLAGS $OPENMP_CXXFLAGS $CXX11_FLAGS"
    # Clean PVODE
    CXX="$MPICXX" CXXFLAGS=$PVODE_FLAGS MKDIR="$MKDIR_P" RANLIB="$RANLIB" $MAKE clean -C externalpackages/PVODE/precon/ >> config-build.log 2>&1
    CXX="$MPICXX" CXXFLAGS=$PVODE_FLAGS MKDIR="$MKDIR_P" RANLIB="$RANLIB" $MAKE clean -C externalpackages/PVODE/source/ >> config-build.log 2>&1
@@ -1342,6 +1379,8 @@ echo "  Parallel-NetCDF support: $HAS_PNETCDF" | tee -a config-build.log
 echo "  HDF5 support: $HAS_HDF5 (parallel: $HAS_PHDF5)" | tee -a config-build.log
 
 echo "  MUMPS support: $HAS_MUMPS" | tee -a config-build.log
+
+echo "  Lapack support: $HAS_LAPACK" | tee -a config-build.log
 
 echo "  Scorep support: $HAS_SCOREP" | tee -a config-build.log
 

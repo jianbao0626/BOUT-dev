@@ -29,6 +29,9 @@ BOUT_CONFIG_FILE=$(BOUT_TOP)/make.config
 # Created this variable so that a user won't overwrite the CXXFLAGS variable
 # on the command line, just add to this one
 BOUT_FLAGS		= $(CXXFLAGS) @CXXFLAGS@ @OPENMP_CXXFLAGS@ @CXX11_FLAGS@ @COVERAGE_FLAGS@
+#Use := here to force a "static" evaluation of the current state of BOUT_FLAGS to
+#avoid infinite recursion that would arise if BOUT_FLAGS appeared on both sides of =
+BOUT_FLAGS := $(BOUT_FLAGS) -DBOUT_FLAGS_STRING="$(BOUT_FLAGS)"
 
 # Specify the MPI C++ compiler in CXX
 
@@ -58,6 +61,8 @@ EXTRA_LIBS		= @EXTRA_LIBS@ @OPENMP_CXXFLAGS@
 
 PRECON_SOURCE	= @PRECON_SOURCE@
 
+BOUT_VERSION  = @PACKAGE_VERSION@
+
 ####################################################################
 # These are used for compiling physics modules using BOUT++ library
 ####################################################################
@@ -67,6 +72,7 @@ PRECON_SOURCE	= @PRECON_SOURCE@
 OBJ						= $(SOURCEC:%.cxx=%.o)
 ifndef RELEASE
 LIB						= $(BOUT_LIB_PATH)/libbout++.a
+LIB_SO						= $(BOUT_LIB_PATH)/libbout++.so
 endif
 
 BOUT_INCLUDE	= -I$(BOUT_INCLUDE_PATH) $(CXXINCLUDE) $(EXTRA_INCS)
@@ -182,16 +188,16 @@ uninstall:
 	$(PRE_UNINSTALL)     # Pre-uninstall commands follow.
 
 	$(NORMAL_UNINSTALL)  # Normal commands follow.
-	rm $(DESTDIR)@datadir@/bout++/make.config
-	rm -r $(DESTDIR)@datadir@/bout++/pylib/boututils/
-	rm -r $(DESTDIR)@datadir@/bout++/pylib/boutdata/
-	rm -r $(DESTDIR)@datadir@/bout++/idllib/
-	rm $(DESTDIR)@bindir@/bout-config
-	rm $(DESTDIR)@bindir@/bout-log-color
-	rm $(DESTDIR)@libdir@/libbout++.a
-	rm $(DESTDIR)@libdir@/libpvode.a
-	rm $(DESTDIR)@libdir@/libpvpre.a
-	rm -r  $(DESTDIR)@includedir@/bout++/
+	$(RM) $(DESTDIR)@datadir@/bout++/make.config
+	$(RM) -r $(DESTDIR)@datadir@/bout++/pylib/boututils/
+	$(RM) -r $(DESTDIR)@datadir@/bout++/pylib/boutdata/
+	$(RM) -r $(DESTDIR)@datadir@/bout++/idllib/
+	$(RM) $(DESTDIR)@bindir@/bout-config
+	$(RM) $(DESTDIR)@bindir@/bout-log-color
+	$(RM) $(DESTDIR)@libdir@/libbout++.a
+	$(RM) $(DESTDIR)@libdir@/libpvode.a
+	$(RM) $(DESTDIR)@libdir@/libpvpre.a
+	$(RM) -r  $(DESTDIR)@includedir@/bout++/
 
 	$(POST_UNINSTALL)    # Post-uninstall commands follow.
 
@@ -282,6 +288,7 @@ DIRS_=$(DIRS:%/=%)
 DIRS__=$(shell for f in $(DIRS_) ; do echo $${f\#\#*/};done)
 # now we can generate a list of libraries
 SUB_LIBS=$(DIRS__:%=%.a)
+$(SUB_LIBS):$(DIRS__)
 
 $(SOURCEC): checklib
 $(SOURCEC:%.cxx=%.o): $(LIB)
@@ -314,6 +321,7 @@ endif
 clean::
 	-@$(RM) -rf $(OBJ) $(DEPS) $(TARGET)
 	@for pp in $(DIRS); do echo "  " $$pp cleaned; $(MAKE) --no-print-directory -C $$pp clean; done
+	@$(RM) -f $(SUB_LIBS)
 
 distclean:: clean clean-tests
 	@echo include cleaned

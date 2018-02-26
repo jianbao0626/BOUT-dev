@@ -6,6 +6,7 @@
 #include "field2d.hxx"
 #include "test_extras.hxx"
 #include "unused.hxx"
+#include "utils.hxx"
 
 #include <cmath>
 #include <set>
@@ -100,9 +101,9 @@ TEST_F(Field2DTest, GetGridSizes) {
 }
 
 TEST_F(Field2DTest, CreateOnGivenMesh) {
-  int test_nx = 2;
-  int test_ny = 3;
-  int test_nz = 5;
+  int test_nx = Field2DTest::nx + 2;
+  int test_ny = Field2DTest::ny + 2;
+  int test_nz = Field2DTest::nz + 2;
 
   FakeMesh *fieldmesh = new FakeMesh(test_nx, test_ny, test_nz);
 
@@ -115,6 +116,58 @@ TEST_F(Field2DTest, CreateOnGivenMesh) {
   EXPECT_EQ(field.getNz(), 1);
 
   delete fieldmesh;
+}
+
+TEST_F(Field2DTest, CopyCheckFieldmesh) {
+  int test_nx = Field2DTest::nx + 2;
+  int test_ny = Field2DTest::ny + 2;
+  int test_nz = Field2DTest::nz + 2;
+
+  FakeMesh *fieldmesh = new FakeMesh(test_nx, test_ny, test_nz);
+
+  Field2D field(fieldmesh);
+  field.allocate();
+
+  Field2D field2(field);
+
+  EXPECT_EQ(field2.getNx(), test_nx);
+  EXPECT_EQ(field2.getNy(), test_ny);
+  EXPECT_EQ(field2.getNz(), 1);
+
+  delete fieldmesh;
+}
+
+#if CHECK > 0
+TEST_F(Field2DTest, CreateOnNullMesh) {
+  auto old_mesh = mesh;
+  mesh = nullptr;
+
+  Field2D field;
+
+  EXPECT_EQ(field.getNx(), -1);
+  EXPECT_EQ(field.getNy(), -1);
+  EXPECT_EQ(field.getNz(), 1);
+
+  mesh = old_mesh;
+
+  field.allocate();
+
+  EXPECT_EQ(field.getNx(), Field2DTest::nx);
+  EXPECT_EQ(field.getNy(), Field2DTest::ny);
+  EXPECT_EQ(field.getNz(), 1);
+}
+#endif
+
+TEST_F(Field2DTest, TimeDeriv) {
+  Field2D field;
+
+  auto deriv = field.timeDeriv();
+  EXPECT_NE(&field, deriv);
+
+  auto deriv2 = field.timeDeriv();
+  EXPECT_EQ(deriv, deriv2);
+
+  EXPECT_EQ(&(ddt(field)), deriv);
 }
 
 /// This test is split into two parts: a very basic sanity check first
@@ -393,6 +446,49 @@ TEST_F(Field2DTest, CheckData) {
   field(1, 1, 1) = std::nan("");
 
   EXPECT_THROW(checkData(field), BoutException);
+}
+
+TEST_F(Field2DTest, InvalidateGuards) {
+  Field2D field;
+  field.allocate(); // Calls invalidateGuards
+  field = 1.0;      // Sets everywhere including boundaries
+
+  const int nmesh = nx * ny;
+
+  int sum = 0;
+  for (const auto &i : field.region(RGN_ALL)) {
+    field[i] = 0.0; // Reset field value
+    sum++;
+  }
+  EXPECT_EQ(sum, nmesh); // Field operator= hasn't been broken by invalidateGuards
+
+  // Count the number of non-boundary points
+  sum = 0;
+  for (const auto &i : field.region(RGN_NOBNDRY)) {
+    field[i] = 0.0; // Reset field value
+    sum++;
+  }
+  const int nbndry = nmesh - sum;
+
+#if CHECK > 2
+  auto localmesh = field.getMesh();
+  EXPECT_NO_THROW(checkData(field(0, 0)));
+  EXPECT_NO_THROW(checkData(field(localmesh->xstart, localmesh->ystart)));
+#endif
+
+  invalidateGuards(field);
+
+#if CHECK > 2
+  EXPECT_THROW(checkData(field(0, 0)), BoutException);
+  EXPECT_NO_THROW(checkData(field(localmesh->xstart, localmesh->ystart)));
+#endif
+
+  sum = 0;
+  for (const auto &i : field.region(RGN_ALL)) {
+    if (!finite(field[i]))
+      sum++;
+  }
+  EXPECT_EQ(sum, nbndry);
 }
 
 #endif // CHECK > 2
@@ -765,7 +861,8 @@ TEST_F(Field2DTest, Min) {
   // min doesn't include guard cells
   const BoutReal min_value = 40.0;
 
-  EXPECT_TRUE(IsField2DEqualBoutReal(min(field, false), min_value));
+  EXPECT_EQ(min(field, false), min_value);
+  EXPECT_EQ(min(field, false,RGN_ALL), -99.0);
 }
 
 TEST_F(Field2DTest, Max) {
@@ -780,5 +877,6 @@ TEST_F(Field2DTest, Max) {
   // max doesn't include guard cells
   const BoutReal max_value = 60.0;
 
-  EXPECT_TRUE(IsField2DEqualBoutReal(max(field, false), max_value));
+  EXPECT_EQ(max(field, false), max_value);
+  EXPECT_EQ(max(field, false,RGN_ALL), 99.0);
 }
