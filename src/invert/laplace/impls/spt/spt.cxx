@@ -37,6 +37,7 @@
 #include <fft.hxx>
 #include <bout/sys/timer.hxx>
 #include <bout/scorepwrapper.hxx>
+#include <bout/openmpwrap.hxx>
 
 #include "spt.hxx"
 
@@ -298,7 +299,7 @@ int LaplaceSPT::start(const FieldPerp &b, SPT_data &data) {
   data.dir = 1;
   
   if(mesh->firstX()) {
-    #pragma omp parallel for
+    BOUT_OMP(parallel for)
     for(int kz = 0; kz <= maxmode; kz++) {
       dcomplex bet, u0;
       // Start tridiagonal solve
@@ -348,7 +349,7 @@ int LaplaceSPT::next(SPT_data &data) {
     if(mesh->lastX()) {
       // Last processor, turn-around
       
-      #pragma omp parallel for
+      BOUT_OMP(parallel for)
       for(int kz = 0; kz <= maxmode; kz++) {
         dcomplex bet, u0;
         dcomplex gp, up;
@@ -376,7 +377,7 @@ int LaplaceSPT::next(SPT_data &data) {
     }else if(data.dir > 0) {
       // In the middle of X, forward direction
 
-      #pragma omp parallel for
+      BOUT_OMP(parallel for)
       for(int kz = 0; kz <= maxmode; kz++) {
 	dcomplex bet, u0;
 	bet = dcomplex(data.buffer[4*kz], data.buffer[4*kz + 1]);
@@ -399,7 +400,7 @@ int LaplaceSPT::next(SPT_data &data) {
     }else if(mesh->firstX()) {
       // Back to the start
 
-#pragma omp parallel for
+BOUT_OMP(parallel for)
       for(int kz = 0; kz <= maxmode; kz++) {
 	dcomplex gp, up;
 	gp = dcomplex(data.buffer[4*kz], data.buffer[4*kz + 1]);
@@ -411,7 +412,7 @@ int LaplaceSPT::next(SPT_data &data) {
     }else {
       // Middle of X, back-substitution stage
 
-      #pragma omp parallel for
+      BOUT_OMP(parallel for)
       for(int kz = 0; kz <= maxmode; kz++) {
 	dcomplex gp = dcomplex(data.buffer[4*kz], data.buffer[4*kz + 1]);
 	dcomplex up = dcomplex(data.buffer[4*kz + 2], data.buffer[4*kz + 3]);

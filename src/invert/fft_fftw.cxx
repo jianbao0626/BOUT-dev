@@ -30,6 +30,7 @@
 #include <fft.hxx>
 #include <bout/constants.hxx>
 #include <bout/scorepwrapper.hxx>
+#include <bout/openmpwrap.hxx>
 
 #include <fftw3.h>
 #include <math.h>
@@ -45,7 +46,7 @@ void fft_init()
 {
   if(fft_options)
     return;
-  //#pragma omp critical
+  //BOUT_OMP(critical)
   {
     Options *opt = Options::getRoot();
     opt = opt->getSection("fft");
@@ -60,8 +61,6 @@ void fft_init()
 
 #ifndef _OPENMP
 // Serial code
-
-
 void rfft(const BoutReal *in, int length, dcomplex *out) {
   SCOREP0();
   // static variables initialized once
@@ -203,16 +202,16 @@ void rfft(const BoutReal *in, int length, dcomplex *out) {
   int n_th = omp_get_num_threads(); // Number of threads
 
   // Sort out memory. Also, FFTW planning routines not thread safe
-  if((size != length) || (nthreads < n_th)) {
-// We make the check to see if the problem size has changed twice
-// intentionally. The first check ensures we don't pay the cost of
-// obtaining a lock for the critical section if we don't need to do
-// any work here. The second check is required to make sure that
-// only one thread does the actual setup when required. Note we can't
-// use a `single` block here as that requires all threads to reach the
-// block (implicit barrier) which may not be true in all cases (e.g.
-// if there are 8 threads but only 4 call the fft routine).
-#pragma omp critical(rfft)
+  if ((size != length) || (nthreads < n_th)) {
+    // We make the check to see if the problem size has changed twice
+    // intentionally. The first check ensures we don't pay the cost of
+    // obtaining a lock for the critical section if we don't need to do
+    // any work here. The second check is required to make sure that
+    // only one thread does the actual setup when required. Note we can't
+    // use a `single` block here as that requires all threads to reach the
+    // block (implicit barrier) which may not be true in all cases (e.g.
+    // if there are 8 threads but only 4 call the fft routine).
+    BOUT_OMP(critical(rfft))
     if ((size != length) || (nthreads < n_th)) {
       if(size > 0) {
         // Free all memory
@@ -222,17 +221,17 @@ void rfft(const BoutReal *in, int length, dcomplex *out) {
         fftw_free(finall);
         fftw_free(foutall);
       }
-      
+
       fft_init();
 
       finall = (double*) fftw_malloc(sizeof(double) * length * n_th);
       foutall = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (length/2 + 1) * n_th);
       p = new fftw_plan[n_th]; //Never freed
-      
+
       unsigned int flags = FFTW_ESTIMATE;
       if(fft_measure)
         flags = FFTW_MEASURE;
-      
+
       for(int i=0;i<n_th;i++)
         // fftw call
         // Plan a real-input/complex-output discrete Fourier transform (DFT)
@@ -248,7 +247,7 @@ void rfft(const BoutReal *in, int length, dcomplex *out) {
   double *fin = finall + th_id * size;
   fftw_complex *fout = foutall + th_id * (size / 2 + 1);
 
-  for(int i=0;i<size;i++)
+  for (int i = 0; i < size; i++)
     fin[i] = in[i];
 
   // fftw call executing the fft
@@ -256,7 +255,7 @@ void rfft(const BoutReal *in, int length, dcomplex *out) {
 
   //Normalising factor
   const BoutReal fac = 1.0 / static_cast<BoutReal>(size);
-  const int nmodes = (size/2) + 1;
+  const int nmodes = (size / 2) + 1;
 
   for(int i=0;i<nmodes;i++)
     out[i] = dcomplex(fout[i][0], fout[i][1]) * fac; // Normalise
@@ -273,16 +272,16 @@ void irfft(const dcomplex *in, int length, BoutReal *out) {
   int n_th = omp_get_num_threads(); // Number of threads
 
   // Sort out memory. Also, FFTW planning routines not thread safe
-  if((size != length) || (nthreads < n_th)) {
-// We make the check to see if the problem size has changed twice
-// intentionally. The first check ensures we don't pay the cost of
-// obtaining a lock for the critical section if we don't need to do
-// any work here. The second check is required to make sure that
-// only one thread does the actual setup when required. Note we can't
-// use a `single` block here as that requires all threads to reach the
-// block (implicit barrier) which may not be true in all cases (e.g.
-// if there are 8 threads but only 4 call the fft routine).
-#pragma omp critical(irfft)
+  if ((size != length) || (nthreads < n_th)) {
+    // We make the check to see if the problem size has changed twice
+    // intentionally. The first check ensures we don't pay the cost of
+    // obtaining a lock for the critical section if we don't need to do
+    // any work here. The second check is required to make sure that
+    // only one thread does the actual setup when required. Note we can't
+    // use a `single` block here as that requires all threads to reach the
+    // block (implicit barrier) which may not be true in all cases (e.g.
+    // if there are 8 threads but only 4 call the fft routine).
+    BOUT_OMP(critical(irfft))
     if ((size != length) || (nthreads < n_th)) {
       if (size > 0) {
         // Free all memory
@@ -312,12 +311,12 @@ void irfft(const dcomplex *in, int length, BoutReal *out) {
       nthreads = n_th;
     }
   }
-  
+
   // Get working arrays for this thread
-  fftw_complex *fin = finall + th_id * (size/2 + 1);
+  fftw_complex *fin = finall + th_id * (size / 2 + 1);
   double *fout = foutall + th_id * size;
-    
-  const int nmodes = (size/2) + 1;
+
+  const int nmodes = (size / 2) + 1;
 
   for(int i=0;i<nmodes;i++) {
     fin[i][0] = in[i].real();
@@ -327,7 +326,7 @@ void irfft(const dcomplex *in, int length, BoutReal *out) {
   // fftw call executing the fft
   fftw_execute(p[th_id]);
 
-  for(int i=0;i<size;i++)
+  for (int i = 0; i < size; i++)
     out[i] = fout[i];
 }
 #endif

@@ -770,12 +770,9 @@ int BoutMesh::load() {
   } else {
     output_info << "No boundary regions in this processor" << endl;
   }
-  output_progress.write("Loading REGIONS\n");
-  get_region(RGN_ALL);
-  get_region(RGN_NOX);
-  get_region(RGN_NOY);
-  get_region(RGN_NOBNDRY);
-
+  
+  output_info << "Constructing default regions" << endl;
+  createDefaultRegions();
   output_info.write("\tdone\n");
 
   return 0;

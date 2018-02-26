@@ -5,6 +5,7 @@
 #include <utils.hxx>
 #include <boutexception.hxx>
 #include <msg_stack.hxx>
+#include <bout/openmpwrap.hxx>
 
 #include <cmath>
 
@@ -120,7 +121,7 @@ int RK4Solver::run() {
           
           // Check accuracy
           BoutReal local_err = 0.;
-          #pragma omp parallel for reduction(+: local_err)   
+          BOUT_OMP(parallel for reduction(+: local_err)   )
           for(int i=0;i<nlocal;i++) {
             local_err += fabs(f2[i] - f1[i]) / ( fabs(f1[i]) + fabs(f2[i]) + atol );
           }
@@ -197,7 +198,7 @@ void RK4Solver::take_step(BoutReal curtime, BoutReal dt, BoutReal *start, BoutRe
   run_rhs(curtime);
   save_derivs(k1);
   
-  #pragma omp parallel for
+  BOUT_OMP(parallel for)
   for(int i=0;i<nlocal;i++)
     k5[i] = start[i] + 0.5*dt*k1[i];
   
@@ -205,7 +206,7 @@ void RK4Solver::take_step(BoutReal curtime, BoutReal dt, BoutReal *start, BoutRe
   run_rhs(curtime + 0.5*dt);
   save_derivs(k2);
   
-  #pragma omp parallel for 
+  BOUT_OMP(parallel for )
   for(int i=0;i<nlocal;i++)
     k5[i] = start[i] + 0.5*dt*k2[i];
   
@@ -213,7 +214,7 @@ void RK4Solver::take_step(BoutReal curtime, BoutReal dt, BoutReal *start, BoutRe
   run_rhs(curtime + 0.5*dt);
   save_derivs(k3);
  
-  #pragma omp parallel for
+  BOUT_OMP(parallel for)
   for(int i=0;i<nlocal;i++)
     k5[i] = start[i] + dt*k3[i];
   
@@ -221,7 +222,7 @@ void RK4Solver::take_step(BoutReal curtime, BoutReal dt, BoutReal *start, BoutRe
   run_rhs(curtime + dt);
   save_derivs(k4);
   
-  #pragma omp parallel for
+  BOUT_OMP(parallel for)
   for(int i=0;i<nlocal;i++)
     result[i] = start[i] + (1./6.)*dt*(k1[i] + 2.*k2[i] + 2.*k3[i] + k4[i]);
 }

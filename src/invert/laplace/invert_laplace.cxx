@@ -43,6 +43,7 @@
 #include <msg_stack.hxx>
 #include <bout/constants.hxx>
 #include <bout/scorepwrapper.hxx>
+#include <bout/openmpwrap.hxx>
 
 #include "laplacefactory.hxx"
 
@@ -74,8 +75,9 @@ Laplacian::Laplacian(Options *options) {
   if(maxmode > ncz/2) maxmode = ncz/2;
 
   OPTION(options, low_mem, false);
-  
-  OPTION(options, nonuniform, mesh->coordinates()->non_uniform); // Default is the mesh setting
+
+  OPTION(options, nonuniform,
+         mesh->coordinates()->non_uniform); // Default is the mesh setting
 
   OPTION(options, all_terms, true); // Include first derivative terms
 
@@ -93,7 +95,7 @@ Laplacian::Laplacian(Options *options) {
     OPTION(options, outer_boundary_flags, 0);
   }
 
-  OPTION(options, include_yguards, true);
+  OPTION(options, include_yguards, false);
 
   OPTION2(options, extra_yguards_lower, extra_yguards_upper, 0);
 }
@@ -335,7 +337,7 @@ void Laplacian::tridagMatrix(dcomplex **avec, dcomplex **bvec, dcomplex **cvec,
 
   Coordinates *coord = mesh->coordinates();
 
-  #pragma omp parallel for
+  BOUT_OMP(parallel for)
   for(int kz = 0; kz <= maxmode; kz++) {
     BoutReal kwave=kz*2.0*PI/coord->zlength(); // wave number is 1/[rad]
 
