@@ -1,6 +1,6 @@
 #!/bin/bash
 find . -type f -name "*.gcov" -delete
-for filename in $(find ./src -type f -name "*.cxx"); do
+for filename in $(find . -type f -name "*.gcno"); do
     (cd $(dirname $filename) && \
          gcov --branch-probabilities \
               --branch-counts \
