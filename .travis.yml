@@ -43,7 +43,7 @@ matrix:
       - make CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture
       - bash <(curl -s https://codecov.io/bash)
       - coveralls --root . --include src --include include --gcov-options '\-lp'
-      - ./get_code_cov.sh
+      - ./get_code_cov.sh > /dev/null
       - sonar-scanner
     cache:
       directories:
