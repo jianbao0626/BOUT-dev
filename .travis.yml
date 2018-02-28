@@ -27,6 +27,7 @@ matrix:
         - libhdf5-serial-dev
         - netcdf-bin
         - hdf5-tools
+        - lcov
       sonarcloud:
         organization: 'bout-project'
         token:
