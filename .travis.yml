@@ -18,6 +18,23 @@ matrix:
   include:
   - env: CONFIGURE_OPTIONS=''
   - addons:
+      sonarCloud:
+        organization: 'bout-project'
+        token:
+          secure: "pC9CO6JoJ7TBRX49I1a9YgZndwU/FWZ5Nl1lrA0YzqyR57ACkWGmS6iISqV5Mh32kgX6684qu3pf8xmB4arPM6unNX5dbPQeL0T/gmt4TG4jYyCHFW4IgEj4RclrLpt0d11v78XD3qz9ZNxMNgAfiPgbTTt+Y6cJY052QjDZXcZGxNIsdyTDAhI1k7rfCYAiCHEGUTJeUUM3YaSZurZdeJAzgK+yKDIrOz3llrs1ZxLRNqpYIrjIZRskT3MtnVumywUJoUdLKGzjTUDMXQgAgcsOcKgQ0zkyXRyuQ2ZdX3zZjffU8HV2mp47Va7JnuZ4Hrhf5/XFktkLi11LKZlmCxR5M6plYANvCPsuK6VIxAoMHf8SdJ/pWI+gR+TRjHNyBbjOyfBn0j3c+ISramNwliRgcOIloqZsZ4HZ2vtuvhKwT86r685YSCsTOG1RwlhiCM6/EElCNphA7eskrmme+HQTJ//fnSDwuiaVadQTZ4dJT8kpL8hlHIhox2LNeCrYuTI20FDYHt4casIQw+Z7gQLPtww02/omxdf2A/fLhuEUIaZNAyo6dstgCA8kX3zVHAX6ZDCpv5HG5AFSLYn8aw+QFZSM9kPTkrNaFd0cxy3IV7I41JpPeaQzZDu2nB9dXn6R2D+Ii5zrTyCsfUlriLS/jbDEtSxiqWK26inFoAw="
+        branches:
+          - coverage-checks
+    env: CONFIGURE_OPTIONS='--code-coverage --enable-debug --enable-checks=3'
+    script:
+      - ./configure $CONFIGURE_OPTIONS
+      - build-wrapper-x86-64 --out-dir bw-output make -j 2 -k
+      - build-wrapper-x86-64 --out-dir bw-output make -j 2 -k check-unit-tests
+    after_success:
+      - make CODE_COVERAGE_BRANCH_COVERAGE=1 code-coverage-capture
+      - bash <(curl -s https://codecov.io/bash)
+      - coveralls --root . --include src --include include --gcov-options '\-lp'
+      - ./get_code_cov.sh
+      - sonar-scanner
 
 before_install:
   ##################################################
@@ -31,6 +48,7 @@ before_install:
   # Install Conda for python 3
   ##################################################
   - source .install_miniconda_for_travis.sh
+  - pip install --user cpp-coveralls
 
   ##################################################
 
