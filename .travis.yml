@@ -28,6 +28,7 @@ matrix:
         - netcdf-bin
         - hdf5-tools
         - jq
+        - lcov
     env: CONFIGURE_OPTIONS='--enable-code-coverage --enable-debug --enable-checks=3'
     script:
       - wget -O ~/codacy-coverage-reporter-assembly-latest.jar $(curl https://api.github.com/repos/codacy/codacy-coverage-reporter/releases/latest | jq -r .assets[0].browser_download_url)
