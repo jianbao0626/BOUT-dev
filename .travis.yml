@@ -27,14 +27,18 @@ matrix:
         - libhdf5-serial-dev
         - netcdf-bin
         - hdf5-tools
+        - jq
     env: CONFIGURE_OPTIONS='--enable-code-coverage --enable-debug --enable-checks=3'
     script:
+      - wget -O ~/codacy-coverage-reporter-assembly-latest.jar $(curl https://api.github.com/repos/codacy/codacy-coverage-reporter/releases/latest | jq -r .assets[0].browser_download_url)
       - ./configure $CONFIGURE_OPTIONS
       - build-wrapper-linux-x86-64 --out-dir bw-output make -j 2 -k
       - build-wrapper-linux-x86-64 --out-dir bw-output make -j 2 -k check-unit-tests
     after_success:
       - bash <(curl -s https://codecov.io/bash)
       - ./get_code_cov.sh > /dev/null
+      - java -cp ~/codacy-coverage-reporter-assembly-latest.jar com.codacy.CodacyCoverageReporter -l Java -r build/reports/jacoco/test/jacocoTestReport.xml
+    secure: D4RlEIdLK/XrmXBxKM12VIA8ft7mkytqMb3cMcErF73r0TlCiVrVNON5LeIHcgiJecVeghJhr0s1H24NRDzuuJPO5jNNe8Q+oKQPdCpJLqiYo2voEqKyPIFEbsuffgTRkyNve5o0NuVnZ8j0TL9Q+W1QHubOtYer3fra3+D+/sH+ujyuzdRz97vua9Odxj+KwZFze3ps9RblEfzpb8+fCfiHcrU0Cv3s1DO7IFuyxDWucMWEPQ3bF6B/JEEhwuvIk7FkxXCoIbsC+23uctzL3ZWsX9TBu35nEDNBOM4GZR7HOrHgEc86kCpXloXBBEghYgqw/eiFxAki56ld5B+QTX5ViC9tpBkaqhsK5+hnYGtIZmOyqevMUmg/rS4iTZF2vcuVBZcfkozSV4EaKQFYVD0t9iV9uGsYD1IGUisCVjz3VxfJyIbD31AX9kCK5/RGqipwTsv07u42N+Jr0of6lD10ckLx98CThlKv2XFjwzlvOjuwXUysFhad5apTkWvdyL4PpbRIrJt/nVZZtGvKW/KIfTDlOw3AiJ2AydsLy90ADVEbDWkav5AP8SnKMPbS6sdx1FmxiX96weo6MKED2KnMX7v7Ke6OyK4ELWVjOQf7M8HEFHFyv7VCTKb4TyMJx1zWbZMbBLMIolBSBuUuHFQJ5Dc1HkLHc6+emuan+EM=
 
 before_install:
   ##################################################
