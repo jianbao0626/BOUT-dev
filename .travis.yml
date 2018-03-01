@@ -33,8 +33,7 @@ matrix:
     script:
       - wget -O ~/codacy-coverage-reporter-assembly-latest.jar $(curl https://api.github.com/repos/codacy/codacy-coverage-reporter/releases/latest | jq -r .assets[0].browser_download_url)
       - ./configure $CONFIGURE_OPTIONS
-      - build-wrapper-linux-x86-64 --out-dir bw-output make -j 2 -k
-      - build-wrapper-linux-x86-64 --out-dir bw-output make -j 2 -k check-unit-tests
+      - make -j 2 -k && make -j 2 -k check-unit-tests
     after_success:
       - bash <(curl -s https://codecov.io/bash)
       - ./get_code_cov.sh > /dev/null
