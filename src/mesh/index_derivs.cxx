@@ -65,6 +65,7 @@
 
 #include <bout/mesh.hxx>
 #include <bout/scorepwrapper.hxx>
+#include <bout/indexoffset.hxx>
 
 /*******************************************************************************
  * Limiters
@@ -1989,6 +1990,7 @@ const Field3D Mesh::indexVDDX(const Field3D &v, const Field3D &f, CELL_LOC outlo
 // special case where both are 2D
 const Field2D Mesh::indexVDDY(const Field2D &v, const Field2D &f, CELL_LOC outloc,
                               DIFF_METHOD method, REGION region) {
+  SCOREP0();
   TRACE("Mesh::indexVDDY");
 
   ASSERT1(this == v.getMesh());
@@ -2178,6 +2180,7 @@ const Field2D Mesh::indexVDDY(const Field2D &v, const Field2D &f, CELL_LOC outlo
 // general case
 const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outloc,
                               DIFF_METHOD method, REGION region) {
+  SCOREP0();
   TRACE("Mesh::indexVDDY(Field3D, Field3D)");
 
   ASSERT1(this == v.getMesh());
@@ -2241,13 +2244,15 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
       vval.mm = nan("");
       fval.pp = nan("");
       fval.mm = nan("");
-      for (const auto &i : result.region(region)) {
+      //for (const auto &i : result.region(region)) {
+      BLOCK_REGION_LOOP(mesh->getRegion("RGN_ALL"), i,
+        IndexOffset<Ind3D> offset(*mesh);
         vval.c = v[i];
-        vval.p = v.yup()[i.yp()];
-        vval.m = v.ydown()[i.ym()];
+        vval.p = v.yup()[offset.yp(i)];
+        vval.m = v.ydown()[offset.ym(i)];
         fval.c = f[i];
-        fval.p = f.yup()[i.yp()];
-        fval.m = f.ydown()[i.ym()];
+        fval.p = f.yup()[offset.yp(i)];
+        fval.m = f.ydown()[offset.ym(i)];
 
         if (diffloc != CELL_DEFAULT) {
           // Non-centred stencil
@@ -2264,7 +2269,8 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
           // Could produce warning
         }
         result[i] = func(vval, fval);
-      }
+      //}
+      );
     } else if (vUseUpDown) {
       // Only v has up/down fields
       // f must shift to field aligned coordinates
@@ -2273,15 +2279,19 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
       stencil vval, fval;
       vval.pp = nan("");
       vval.mm = nan("");
-      for (const auto &i : result.region(region)) {
+      //for (const auto &i : result.region(region)) {
+      BLOCK_REGION_LOOP(mesh->getRegion("RGN_ALL"), i,
+        IndexOffset<Ind3D> offset(*mesh);
         vval.c = v[i];
-        vval.p = v.yup()[i.yp()];
-        vval.m = v.ydown()[i.ym()];
+        vval.p = v.yup()[offset.yp(i)];
+        vval.m = v.ydown()[offset.ym(i)];
         fval.c = f_fa[i];
-        fval.p = f_fa[i.yp()];
-        fval.m = f_fa[i.ym()];
-        fval.pp = f_fa[i.offset(0, 2, 0)];
-        fval.mm = f_fa[i.offset(0, -2, 0)];
+        fval.p = f_fa[offset.yp(i)];
+        fval.m = f_fa[offset.ym(i)];
+        fval.pp = f_fa[offset.ypp(i)];
+        fval.mm = f_fa[offset.ymm(i)];
+        //fval.pp = f_fa[i.offset(0, 2, 0)];
+        //fval.mm = f_fa[i.offset(0, -2, 0)];
 
         if (diffloc != CELL_DEFAULT) {
           // Non-centred stencil
@@ -2298,7 +2308,8 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
           // Could produce warning
         }
         result[i] = func(vval, fval);
-      }
+      //}
+      );
     } else if (fUseUpDown) {
       // Only f has up/down fields
       // v must shift to field aligned coordinates
@@ -2307,15 +2318,17 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
       stencil vval, fval;
       fval.pp = nan("");
       fval.mm = nan("");
-      for (const auto &i : result.region(region)) {
+      //for (const auto &i : result.region(region)) {
+      BLOCK_REGION_LOOP(mesh->getRegion("RGN_ALL"), i,
+        IndexOffset<Ind3D> offset(*mesh);
         vval.c = v_fa[i];
-        vval.p = v_fa[i.yp()];
-        vval.m = v_fa[i.ym()];
-        vval.pp = v_fa[i.offset(0, 2, 0)];
-        vval.mm = v_fa[i.offset(0, -2, 0)];
+        vval.p = v_fa[offset.yp(i)];
+        vval.m = v_fa[offset.ym(i)];
+        vval.pp = v_fa[offset.ypp(i)];
+        vval.mm = v_fa[offset.ymm(i)];
         fval.c = f[i];
-        fval.p = f.yup()[i.yp()];
-        fval.m = f.ydown()[i.ym()];
+        fval.p = f.yup()[offset.yp(i)];
+        fval.m = f.ydown()[offset.ym(i)];
 
         if (diffloc != CELL_DEFAULT) {
           // Non-centred stencil
@@ -2332,24 +2345,27 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
           // Could produce warning
         }
         result[i] = func(vval, fval);
-      }
+      //}
+      );
     } else {
       // Both must shift to field aligned
       Field3D v_fa = mesh->toFieldAligned(v);
       Field3D f_fa = mesh->toFieldAligned(f);
 
       stencil vval, fval;
-      for (const auto &i : result.region(region)) {
+      //for (const auto &i : result.region(region)) {
+      BLOCK_REGION_LOOP(mesh->getRegion("RGN_ALL"), i,
+        IndexOffset<Ind3D> offset(*mesh);
         vval.c = v_fa[i];
-        vval.p = v_fa[i.yp()];
-        vval.m = v_fa[i.ym()];
-        vval.pp = v_fa[i.offset(0, 2, 0)];
-        vval.mm = v_fa[i.offset(0, -2, 0)];
+        vval.p = v_fa[offset.yp(i)];
+        vval.m = v_fa[offset.ym(i)];
+        vval.pp = v_fa[offset.ypp(i)];
+        vval.mm = v_fa[offset.ymm(i)];
         fval.c = f[i];
-        fval.p = f_fa[i.yp()];
-        fval.m = f_fa[i.ym()];
-        fval.pp = f_fa[i.offset(0, 2, 0)];
-        fval.mm = f_fa[i.offset(0, -2, 0)];
+        fval.p = f_fa[offset.yp(i)];
+        fval.m = f_fa[offset.ym(i)];
+        fval.pp = f_fa[offset.ypp(i)];
+        fval.mm = f_fa[offset.ymm(i)];
 
         if (diffloc != CELL_DEFAULT) {
           // Non-centred stencil
@@ -2367,7 +2383,8 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
         }
         result[i] = func(vval, fval);
       }
-    }
+    //}
+    );
   } else {
     // Non-staggered case
 
@@ -2449,6 +2466,7 @@ const Field3D Mesh::indexVDDY(const Field3D &v, const Field3D &f, CELL_LOC outlo
 // general case
 const Field3D Mesh::indexVDDZ(const Field3D &v, const Field3D &f, CELL_LOC outloc,
                               DIFF_METHOD method, REGION region) {
+  SCOREP0();
   TRACE("Mesh::indexVDDZ");
 
   ASSERT1(this == v.getMesh());

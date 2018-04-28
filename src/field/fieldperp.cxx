@@ -72,6 +72,59 @@ void FieldPerp::allocate() {
     data.ensureUnique();
 }
 
+////////////// Indexing ///////////////////
+
+///const DataIterator FieldPerp::iterator() const {
+///  return DataIterator(0, nx-1,
+///                      0, 0,
+///                      0, nz-1);
+///}
+///
+///const DataIterator FieldPerp::begin() const {
+///  return Field2D::iterator();
+///}
+///
+///const DataIterator FieldPerp::end() const {
+///  return DataIterator(0, nx-1,
+///                      0, 0,
+///                      0, nz-1, DI_GET_END);
+///}
+
+///const IndexRange FieldPerp::region(REGION rgn) const {
+///  switch(rgn) {
+///  case RGN_ALL: {
+///    return IndexRange{0, nx-1,
+///        0, 0,
+///        0, nz-1};
+///  }
+///  case RGN_NOBNDRY: {
+///    return IndexRange{fieldmesh->xstart, fieldmesh->xend,
+///        0, 0,
+///        0, nz-1};
+///  }
+///  case RGN_NOX: {
+///    return IndexRange{fieldmesh->xstart, fieldmesh->xend,
+///        0, 0,
+///        0, nz-1};
+///  }
+///  case RGN_NOY: {
+///    return IndexRange{0, nx-1,
+///        0, 0,
+///        0, nz-1};
+///  }
+///  default: {
+///    throw BoutException("FieldPerp::region() : Requested region not implemented");
+///  }
+///  };
+///}
+///BoutReal& FieldPerp::operator[](const Ind3D &d) {
+///  return data[fieldmesh->map3DtoPerp(d)];
+///}
+///
+///const BoutReal& FieldPerp::operator[](const Ind3D &d) const {
+///  return data[fieldmesh->map3DtoPerp(d)];
+///}
+
 /***************************************************************
  *                         ASSIGNMENT 
  ***************************************************************/

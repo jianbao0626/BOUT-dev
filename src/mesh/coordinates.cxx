@@ -231,6 +231,7 @@ int Coordinates::geometry() {
   // Calculate Christoffel symbol terms (18 independent values)
   // Note: This calculation is completely general: metric
   // tensor can be 2D or 3D. For 2D, all DDZ terms are zero
+  TRACE("Coordinates::geometry::before Christoffel");
 
   G1_11 = 0.5 * g11 * DDX(g_11) + g12 * (DDX(g_12) - 0.5 * DDY(g_11)) +
           g13 * (DDX(g_13) - 0.5 * DDZ(g_11));

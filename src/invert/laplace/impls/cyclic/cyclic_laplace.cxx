@@ -184,6 +184,7 @@ const FieldPerp LaplaceCyclic::solve(const FieldPerp &rhs, const FieldPerp &x0) 
 
     // Get elements of the tridiagonal matrix
     // including boundary conditions
+//BOUT_OMP(parallel for)
     for(int kz = 0; kz < nmode; kz++) {
       BoutReal kwave=kz*2.0*PI/(coord->zlength()); // wave number is 1/[rad]
       tridagMatrix(&a(kz,0), &b(kz,0), &c(kz,0), &bcmplx(kz,0), jy,
@@ -200,6 +201,7 @@ const FieldPerp LaplaceCyclic::solve(const FieldPerp &rhs, const FieldPerp &x0) 
     cr->solve(bcmplx, xcmplx);
 
     // FFT back to real space
+//BOUT_OMP(parallel for private(k1d))
     for(int ix=xs; ix <= xe; ix++) {
       for(int kz = 0; kz < nmode; kz++)
         k1d[kz] = xcmplx(kz, ix-xs);

@@ -88,6 +88,15 @@ class FieldPerp : public Field {
 
   const IndexRange region(REGION rgn) const override;
 
+///  BoutReal& operator[](const IndPerp &d) {
+///    return data[d.ind];
+///  }
+///  const BoutReal& operator[](const IndPerp &d) const {
+///    return data[d.ind];
+///  }
+///  BoutReal& operator[](const Ind3D &d); 
+///  const BoutReal& operator[](const Ind3D &d) const;
+
   /*!
    * Direct data access using DataIterator indexing
    */

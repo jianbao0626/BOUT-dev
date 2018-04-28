@@ -327,6 +327,13 @@ class Field3D : public Field, public FieldData {
   const IndexRange region2D(REGION rgn) const;
 
   /*!
+   * Like Field3D::region(REGION rgn), but returns range
+   * to iterate over only x-z, not y.
+   *
+   */
+  const IndexRange regionPerp(REGION rgn) const;
+
+  /*!
    * Direct data access using DataIterator object.
    * This uses operator(x,y,z) so checks will only be
    * performed if CHECK > 2.

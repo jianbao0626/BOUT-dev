@@ -583,8 +583,9 @@ class Mesh {
   Region<> &getRegion(const std::string &region_name){
     return getRegion3D(region_name);
   }
-  Region<Ind3D> &getRegion3D(const std::string &region_name);
-  Region<Ind2D> &getRegion2D(const std::string &region_name);
+  Region<Ind3D>   &getRegion3D(const std::string &region_name);
+  Region<Ind2D>   &getRegion2D(const std::string &region_name);
+  Region<IndPerp> &getRegionPerp(const std::string &region_name);
   
   /// Add a new region to the region_map for the data iterator
   ///
@@ -595,9 +596,20 @@ class Mesh {
   void addRegion(const std::string &region_name, Region<Ind2D> region){
     return addRegion2D(region_name, region);
   }
+  void addRegion(const std::string &region_name, Region<IndPerp> region){
+    return addRegionPerp(region_name, region);
+  }
   void addRegion3D(const std::string &region_name, Region<Ind3D> region);
   void addRegion2D(const std::string &region_name, Region<Ind2D> region);
+  void addRegionPerp(const std::string &region_name, Region<IndPerp> region);
 
+  /// Map between Ind3D and Ind2D
+  /// 
+  /// Let (jx,jy,jz) be the coordinate in 3D space, and 
+  /// (LocalNx,LocalNy,LocalNz) be the grid size. Then
+  ///   ind2d.ind = jx * LocalNy + jy
+  ///   ind3d.ind = (jx * LocalNy + jy) * LocalNz + jz
+  ///             = ind2d.ind * LocalNz + jz
   Ind3D ind2Dto3D(const Ind2D &ind2D, int jz = 0){
     return Ind3D(ind2D.ind * LocalNz + jz);
   }
@@ -608,6 +620,29 @@ class Mesh {
 
   int map3Dto2D(const Ind3D &ind3D){
     return indexLookup3Dto2D[ind3D.ind];
+  }
+
+  /// Map between Ind3D and IndPerp
+  /// 
+  /// Let (jx,jy,jz) be the coordinate in 3D space, and 
+  /// (LocalNx,LocalNy,LocalNz) be the grid size. Then
+  ///   indPerp.ind = jx * LocalNz + jz
+  ///   ind3d.ind   = (jx * LocalNy + jy) * LocalNz + jz
+  ///               = jx * LocalNy * LocalNz + jy * LocalNz + jz
+  ///               = (indPerp.ind - jz) * LocalNy + jy * LocalNz + jz
+  ///   ind3d.ind - jz = (indPerp.ind - jz) * LocalNy + jy * LocalNz 
+  Ind3D indPerpto3D(const IndPerp &indPerp, int jy = 0){
+    int jz = indPerp.ind % LocalNz ;
+    return Ind3D(indPerp.ind * LocalNy + jz*(1-LocalNy) + jy*LocalNz);
+  }
+
+  IndPerp ind3DtoPerp(const Ind3D &ind3D){
+    int jz = ind3D.ind % LocalNz ;
+    return IndPerp( jz + LocalNz * ( (ind3D.ind - jz) / (LocalNy * LocalNz ) ) );
+  }
+
+  int map3DtoPerp(const Ind3D &ind3D){
+    return indexLookup3DtoPerp[ind3D.ind];
   }
   
   /// Create the default regions for the data iterator
@@ -656,7 +691,9 @@ private:
   //Internal region related information
   std::map<std::string, Region<Ind3D>> regionMap3D;
   std::map<std::string, Region<Ind2D>> regionMap2D;
+  std::map<std::string, Region<IndPerp>> regionMapPerp;
   Array<int> indexLookup3Dto2D;
+  Array<int> indexLookup3DtoPerp;
 };
 
 #endif // __MESH_H__

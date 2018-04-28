@@ -352,6 +352,35 @@ const IndexRange Field3D::region2D(REGION rgn) const {
   };
 }
 
+const IndexRange Field3D::regionPerp(REGION rgn) const {
+  SCOREP0();
+  switch(rgn) {
+  case RGN_ALL: {
+    return IndexRange{0, nx-1,
+        0, 0,
+        0, nz-1};
+  }
+  case RGN_NOBNDRY: {
+    return IndexRange{fieldmesh->xstart, fieldmesh->xend,
+        0, 0,
+        0, nz-1};
+  }
+  case RGN_NOX: {
+    return IndexRange{fieldmesh->xstart, fieldmesh->xend,
+        0, 0,
+        0, nz-1};
+  }
+  case RGN_NOY: {
+    return IndexRange{0, nx-1,
+        0, 0,
+        0, nz-1};
+  }
+  default: {
+    throw BoutException("Field3D::regionPerp() : Requested region not implemented");
+  }
+  };
+}
+
 /////////////////// ASSIGNMENT ////////////////////
 
 Field3D & Field3D::operator=(const Field3D &rhs) {
@@ -389,8 +418,9 @@ Field3D & Field3D::operator=(const Field2D &rhs) {
   allocate();
 
   /// Copy data
-  for(const auto& i : (*this))
+  BLOCK_REGION_LOOP((*this).getMesh()->getRegion3D("RGN_ALL"),i,
     (*this)[i] = rhs[i];
+  );
   
   /// Only 3D fields have locations for now
   //location = CELL_CENTRE;
@@ -406,9 +436,11 @@ void Field3D::operator=(const FieldPerp &rhs) {
   allocate();
 
   /// Copy data
+  //BLOCK_REGION_LOOP((*this).getMesh()->getRegion3D("RGN_ALL"),i,
   for(const auto& i : rhs) {
     (*this)[i] = rhs[i];
   }
+  //);
 }
 
 Field3D & Field3D::operator=(const BoutReal val) {
@@ -420,8 +452,9 @@ Field3D & Field3D::operator=(const BoutReal val) {
   if(!finite(val))
     throw BoutException("Field3D: Assignment from non-finite BoutReal\n");
 #endif
-  for(const auto& i : (*this))
+  BLOCK_REGION_LOOP((*this).getMesh()->getRegion3D("RGN_ALL"),i,
     (*this)[i] = val;
+  );
 
   // Only 3D fields have locations
   //location = CELL_CENTRE;
@@ -796,9 +829,9 @@ Field3D pow(const Field3D &lhs, BoutReal rhs, REGION rgn) {
 
   Field3D result(lhs.getMesh());
   result.allocate();
-  for(const auto& i : result.region(rgn)) {
+  BLOCK_REGION_LOOP(result.getMesh()->getRegion3D("RGN_ALL"),i,
     result[i] = ::pow(lhs[i], rhs);
-  }
+  );
   
   result.setLocation( lhs.getLocation() );
 
@@ -897,9 +930,9 @@ BoutReal max(const Field3D &f, bool allpe, REGION rgn) {
     Field3D result(f.getMesh());                                                         \
     result.allocate();                                                                   \
     /* Loop over domain */                                                               \
-    for (const auto &d : result.region(rgn)) {                                           \
-      result[d] = func(f[d]);                                                            \
-    }                                                                                    \
+    BLOCK_REGION_LOOP(result.getMesh()->getRegion3D("RGN_ALL"),i,                        \
+      result[i] = func(f[i]);                                                            \
+    );                                                                                   \
     result.setLocation(f.getLocation());                                                 \
     checkData(result, rgn);                                                              \
     return result;                                                                       \
