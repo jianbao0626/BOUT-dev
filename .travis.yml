@@ -98,7 +98,7 @@ matrix:
           - liblapack-dev
           - libparpack2-dev
     env:
-      - CONFIGURE_OPTIONS="--enable-code-coverage --enable-debug --enable-track --enable-checks=3 --with-petsc=/usr/lib/petscdir/3.4.2 --with-lapack --with-slepc --enable-openmp"
+      - CONFIGURE_OPTIONS="--enable-code-coverage --enable-debug --enable-track --enable-checks=3 --with-petsc=/usr/lib/petscdir/3.4.2 --with-lapack --with-slepc --enable-openmp CPPFLAGS=/usr/lib/petscdir/3.4.2/include/"
       - OMP_NUM_THREADS=2
       - PETSC_DIR=/usr/lib/petscdir/3.4.2
       - PETSC_ARCH=linux-gnu-c-opt
