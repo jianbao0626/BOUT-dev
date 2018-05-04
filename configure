@@ -8897,17 +8897,8 @@ fi
 fi
 
 
-  # PETSc installations are apparently random, so we can't actually
-  # guess what include directories we need even for the simple tests
-  # below. We resort to trying to find what we need in their
-  # overly-complicated "petscvariables" file
-  PETSC_INCLUDES=`$GREP PETSC_CC_INCLUDES ${PETSC_CONFDIR}/petscvariables | $SED 's/PETSC_CC_INCLUDES *= *//'`
-  PETSC_VARS=`cat ${PETSC_CONFDIR}/petscvariables`
-  { $as_echo "$as_me:${as_lineno-$LINENO}: $PETSC_VARS" >&5
-$as_echo "$as_me: $PETSC_VARS" >&6;}
-
   save_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $PETSC_INCLUDES"
+  CPPFLAGS="$CPPFLAGS -I$PETSC_DIR/include"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking PETSc is at least 3.4.0" >&5
 $as_echo_n "checking PETSc is at least 3.4.0... " >&6; }
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext

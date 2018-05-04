@@ -613,16 +613,8 @@ AS_IF([test "x$with_petsc" != "x" && test "$with_petsc" != "no"], [
     ])
   ])
 
-  # PETSc installations are apparently random, so we can't actually
-  # guess what include directories we need even for the simple tests
-  # below. We resort to trying to find what we need in their
-  # overly-complicated "petscvariables" file
-  PETSC_INCLUDES=`$GREP PETSC_CC_INCLUDES ${PETSC_CONFDIR}/petscvariables | $SED 's/PETSC_CC_INCLUDES *= *//'`
-  PETSC_VARS=`cat ${PETSC_CONFDIR}/petscvariables`
-  AC_MSG_NOTICE([$PETSC_VARS])
-
   save_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $PETSC_INCLUDES"
+  CPPFLAGS="$CPPFLAGS -I$PETSC_DIR/include"
   AC_MSG_CHECKING([PETSc is at least 3.4.0])
   AC_EGREP_CPP([yes], [
     #include <petscversion.h>
