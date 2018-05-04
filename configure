@@ -8902,6 +8902,8 @@ fi
   # below. We resort to trying to find what we need in their
   # overly-complicated "petscvariables" file
   PETSC_INCLUDES=`$GREP PETSC_CC_INCLUDES ${PETSC_CONFDIR}/petscvariables | $SED 's/PETSC_CC_INCLUDES *= *//'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: Found PETSC_CC_INCLUDES=$PETSC_INCLUDES" >&5
+$as_echo "$as_me: Found PETSC_CC_INCLUDES=$PETSC_INCLUDES" >&6;}
 
   save_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $PETSC_INCLUDES"

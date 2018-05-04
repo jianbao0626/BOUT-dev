@@ -618,6 +618,7 @@ AS_IF([test "x$with_petsc" != "x" && test "$with_petsc" != "no"], [
   # below. We resort to trying to find what we need in their
   # overly-complicated "petscvariables" file
   PETSC_INCLUDES=`$GREP PETSC_CC_INCLUDES ${PETSC_CONFDIR}/petscvariables | $SED 's/PETSC_CC_INCLUDES *= *//'`
+  AC_MSG_NOTICE([Found PETSC_CC_INCLUDES="$PETSC_INCLUDES"])
 
   save_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $PETSC_INCLUDES"
