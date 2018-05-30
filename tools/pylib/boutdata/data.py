@@ -260,6 +260,7 @@ class BoutOutputs(object):
     **kwargs - keyword arguments that are passed through to _caching_collect()
 
     :ivar attributes: dictionary of attributes from the first DataFile
+    :ivar evolvingVariables: list of time-evolving variables
     """
 
     def __init__(self, path=".", prefix="BOUT.dmp", suffix=None, caching=False, DataFileCaching=True, **kwargs):
@@ -297,7 +298,7 @@ class BoutOutputs(object):
         # Available variables
         self.varNames = []
         self.dimensions = {}
-        self.evolvingVariableNames = []
+        self.evolvingVariables = []
 
         with DataFile(latest_file) as f:
             self.attributes = f.attributes()
@@ -321,7 +322,7 @@ class BoutOutputs(object):
                 dimensions = f.dimensions(name)
                 self.dimensions[name] = dimensions
                 if name != "t_array" and "t" in dimensions:
-                    self.evolvingVariableNames.append(name)
+                    self.evolvingVariables.append(name)
 
         # Private variables
         if self._caching:
@@ -345,12 +346,6 @@ class BoutOutputs(object):
         Return a list of available variable names
         """
         return self.varNames
-
-    def evolvingVariables(self):
-        """
-        Return a list of names of time-evolving variables
-        """
-        return self.evolvingVariableNames
 
     def redistribute(self, npes, nxpe=None, mxg=2, myg=2, include_restarts=True):
         """
