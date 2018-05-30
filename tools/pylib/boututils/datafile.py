@@ -140,8 +140,14 @@ class DataFile:
     def __setitem__(self, key, value):
         self.impl.__setitem__(key, value)
 
-    def attributes(self, varname):
-        """Return a dictionary of attributes"""
+    def attributes(self, varname=""):
+        """
+        Return a dictionary of attributes
+
+        These are attributes for varname if varname is specified. If varname is
+        the empty string (default case) then the global attributes of the file
+        are returned.
+        """
         return self.impl.attributes(varname)
 
 
@@ -506,8 +512,14 @@ class DataFile_netCDF(DataFile):
         except AttributeError:
             pass
 
-    def attributes(self, varname):
-        """Return a dictionary of variable attributes"""
+    def attributes(self, varname=""):
+        """
+        Return a dictionary of attributes
+
+        These are attributes for varname if varname is specified. If varname is
+        the empty string (default case) then the global attributes of the file
+        are returned.
+        """
         try:
             return self._attributes_cache[varname]
         except KeyError:
@@ -792,8 +804,14 @@ class DataFile_HDF5(DataFile):
             # data is not a BoutArray, so doesn't have attributes to write
             pass
 
-    def attributes(self, varname):
-        """Return a map of variable attributes"""
+    def attributes(self, varname=""):
+        """
+        Return a dictionary of attributes
+
+        These are attributes for varname if varname is specified. If varname is
+        the empty string (default case) then the global attributes of the file
+        are returned.
+        """
 
         try:
             return self._attributes_cache[varname]
