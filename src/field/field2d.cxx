@@ -70,6 +70,10 @@ Field2D::Field2D(const Field2D& f) : Field(f.fieldmesh), // The mesh containing 
                                      deriv(nullptr) {
   TRACE("Field2D(Field2D&)");
 
+#ifdef TRACK
+  name = f.name;
+#endif
+
 #if CHECK > 2
   checkData(f);
 #endif
@@ -86,7 +90,6 @@ Field2D::Field2D(const Field2D& f) : Field(f.fieldmesh), // The mesh containing 
 #endif
 
   boundaryIsSet = false;
-  *this = f; //This line is probably not required as we init data from f.data above.
 }
 
 Field2D::Field2D(BoutReal val, Mesh *localmesh) : Field(localmesh), deriv(nullptr) {
@@ -171,6 +174,14 @@ const IndexRange Field2D::region(REGION rgn) const {
   };
 }
 
+BoutReal& Field2D::operator[](const Ind3D &d) {
+  return data[fieldmesh->map3Dto2D(d)];
+}
+
+const BoutReal& Field2D::operator[](const Ind3D &d) const {
+  return data[fieldmesh->map3Dto2D(d)];
+}
+
 ///////////// OPERATORS ////////////////
 
 Field2D &Field2D::operator=(const Field2D &rhs) {
@@ -213,53 +224,6 @@ Field2D &Field2D::operator=(const BoutReal rhs) {
     (*this)[i] = rhs;
 
   return *this;
-}
-
-////////////////////// STENCILS //////////////////////////
-
-void Field2D::getXArray(int y, int UNUSED(z), rvec &xv) const {
-  ASSERT1(isAllocated());
-
-  xv.resize(nx);
-
-  for(int x=0;x<nx;x++)
-    xv[x] = operator()(x,y);
-}
-
-void Field2D::getYArray(int x, int UNUSED(z), rvec &yv) const {
-  ASSERT1(isAllocated());
-
-  yv.resize(ny);
-
-  for(int y=0;y<ny;y++)
-    yv[y] = operator()(x,y);
-}
-
-void Field2D::getZArray(int x, int y, rvec &zv) const {
-  ASSERT1(isAllocated());
-
-  zv.resize(fieldmesh->LocalNz);
-
-  for(int z=0;z<fieldmesh->LocalNz;z++)
-    zv[z] = operator()(x,y);
-}
-
-void Field2D::setXArray(int y, int UNUSED(z), const rvec &xv) {
-  allocate();
-
-  ASSERT0(xv.capacity() == static_cast<unsigned int>(nx));
-
-  for(int x=0;x<nx;x++)
-    operator()(x,y) = xv[x];
-}
-
-void Field2D::setYArray(int x, int UNUSED(z), const rvec &yv) {
-  allocate();
-
-  ASSERT0(yv.capacity() == static_cast<unsigned int>(fieldmesh->LocalNy));
-
-  for(int y=0;y<fieldmesh->LocalNy;y++)
-    operator()(x,y) = yv[y];
 }
 
 ///////////////////// BOUNDARY CONDITIONS //////////////////
@@ -474,7 +438,7 @@ bool finite(const Field2D &f, REGION rgn) {
     for (const auto &d : result.region(rgn)) {                                           \
       result[d] = func(f[d]);                                                            \
     }                                                                                    \
-    checkData(result, rgn);                                                              \
+    checkData(result);                                                                   \
     return result;                                                                       \
   }
 
@@ -525,7 +489,7 @@ Field2D pow(const Field2D &lhs, const Field2D &rhs, REGION rgn) {
     result[i] = ::pow(lhs[i], rhs[i]);
   }
 
-  checkData(result, rgn);
+  checkData(result);
   return result;
 }
 
@@ -543,7 +507,7 @@ Field2D pow(const Field2D &lhs, BoutReal rhs, REGION rgn) {
     result[i] = ::pow(lhs[i], rhs);
   }
 
-  checkData(result, rgn);
+  checkData(result);
   return result;
 }
 
@@ -561,7 +525,7 @@ Field2D pow(BoutReal lhs, const Field2D &rhs, REGION rgn) {
     result[i] = ::pow(lhs, rhs[i]);
   }
 
-  checkData(result, rgn);
+  checkData(result);
   return result;
 }
 

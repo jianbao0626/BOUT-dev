@@ -37,8 +37,9 @@ class SlepcSolver;
 #include <field3d.hxx>
 #include <vector2d.hxx>
 #include <vector3d.hxx>
-#include "../../solverfactory.hxx"
+#include "bout/solverfactory.hxx"
 #include <bout/solver.hxx>
+#include <utils.hxx>
 
 #include <vector>
 #include <bout/slepclib.hxx>
@@ -49,6 +50,10 @@ class SlepcSolver;
 //Define a name to use with SolverType to indicate SlepcSolver
 //is in charge of advancing fields
 #define SOLVERSLEPCSELF "self"
+
+namespace {
+RegisterSolver<SlepcSolver> registersolverslepc("slepc");
+}
 
 using std::vector;
 
@@ -176,8 +181,7 @@ private:
   bool eigenValOnly;
 
   //For selfSolve=true
-  BoutReal *f0;
-  BoutReal *f1;
+  Array<BoutReal> f0, f1;
 
   //Timestep details
   int nout;
@@ -200,13 +204,5 @@ private:
 
 
 #endif // __SLEPC_SOLVER_H__
-
-#endif
-
-#ifndef __SLEPC_SOLVER_H__
-#define __SLEPC_SOLVER_H__
-
-#include "../emptysolver.hxx"
-typedef EmptySolver SlepcSolver;
 
 #endif

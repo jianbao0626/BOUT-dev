@@ -38,6 +38,7 @@
 #include <options.hxx>
 #include <invert_laplace.hxx>
 #include <boutexception.hxx>
+#include <utils.hxx>
 
 #define MAXGM 15
 
@@ -50,11 +51,10 @@ public:
 
   void setMultigridC(int );
   void getSolution(BoutReal *,BoutReal *,int ); 
-  void cleanMem();
 
   int mglevel,mgplag,cftype,mgsm,pcheck,xNP,zNP,rProcI;
   BoutReal rtol,atol,dtol,omega;
-  int *gnx,*gnz,*lnx,*lnz;
+  Array<int> gnx, gnz, lnx, lnz;
   BoutReal **matmg;
 
 protected:
@@ -86,28 +86,24 @@ protected:
 
 class MultigridSerial: public MultigridAlg{
 public:
-  MultigridSerial(int ,int ,int ,int ,int ,MPI_Comm ,int );
-  ~MultigridSerial();
+  MultigridSerial(int level, int gx, int gz, MPI_Comm comm, int check);
+  ~MultigridSerial() {};
 
   void convertMatrixF(BoutReal *); 
-
-private:
-  
 };
 
 class Multigrid2DPf1D: public MultigridAlg{
 public:
   Multigrid2DPf1D(int ,int ,int ,int ,int ,int ,int ,int ,MPI_Comm ,int );
-  ~Multigrid2DPf1D();
+  ~Multigrid2DPf1D() {};
 
   void setMultigridC(int );
   void setPcheck(int );
   void setValueS();
-  void cleanS();
   int kflag;
 
 private:
-  MultigridSerial *sMG;
+  std::unique_ptr<MultigridSerial> sMG;
   void convertMatrixFS(int  ); 
   void lowestSolver(BoutReal *, BoutReal *, int );
   
@@ -116,19 +112,16 @@ private:
 class Multigrid1DP: public MultigridAlg{
 public:
   Multigrid1DP(int ,int ,int ,int ,int ,int, MPI_Comm ,int );
-  ~Multigrid1DP();
+  ~Multigrid1DP() {};
   void setMultigridC(int );
   void setPcheck(int );
   void setValueS();
-  void cleanS();
-
   int kflag;
-
 
 private:
   MPI_Comm comm2D;
-  MultigridSerial *sMG;
-  Multigrid2DPf1D *rMG;
+  std::unique_ptr<MultigridSerial> sMG;
+  std::unique_ptr<Multigrid2DPf1D> rMG;
   void convertMatrixF2D(int ); 
   void convertMatrixFS(int ); 
   void lowestSolver(BoutReal *, BoutReal *, int );
@@ -140,7 +133,7 @@ private:
 class LaplaceMultigrid : public Laplacian {
 public:
   LaplaceMultigrid(Options *opt = NULL);
-  ~LaplaceMultigrid();
+  ~LaplaceMultigrid() {};
   
   void setCoefA(const Field2D &val) override { A = val; }
   void setCoefC(const Field2D &val) override { C1 = val; C2 = val;  }
@@ -163,13 +156,12 @@ private:
   Field3D A,C1,C2,D; // ODE Coefficients
   int Nx_local, Nx_global, Nz_local, Nz_global; // Local and global grid sizes
   int yindex; // y-position of the current solution phase
-  BoutReal *x; // solution vector
-  BoutReal *b; // RHS vector
-  Multigrid1DP *kMG;
+  Array<BoutReal> x; // solution vector
+  Array<BoutReal> b; // RHS vector
+  std::unique_ptr<Multigrid1DP> kMG;
 
   /******* Start implementation ********/
-  int mglevel,mgplag,cftype,mgsm,pcheck,tcheck;
-  int xNP,xProcI;
+  int mglevel,mgplag,cftype,mgsm,pcheck;
   int mgcount,mgmpi;
 
   Options *opts;

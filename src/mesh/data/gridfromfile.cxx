@@ -22,9 +22,10 @@
  * format     Pointer to DataFormat. This will be deleted in
  *            destructor
  */
-GridFile::GridFile(std::unique_ptr<DataFormat> format, const string gridfilename) : file(format.release()), filename(gridfilename) {
+GridFile::GridFile(std::unique_ptr<DataFormat> format, const string &gridfilename)
+  : file(std::move(format)), filename(gridfilename) {
   TRACE("GridFile constructor");
-  
+
   if (! file->openr(filename) ) {
     throw BoutException("Could not open file '%s'", filename.c_str());
   }
@@ -421,8 +422,8 @@ bool GridFile::readgrid_3dvar_fft(Mesh *m, const string &name,
   }
 
   /// Data for FFT. Only positive frequencies
-  dcomplex* fdata = new dcomplex[ncz/2 + 1];
-  BoutReal* zdata = new BoutReal[size[2]];
+  Array<dcomplex> fdata(ncz / 2 + 1);
+  Array<BoutReal> zdata(size[2]);
 
   for(int jx=xge;jx<xlt;jx++) {
     // Set the global X index
@@ -433,7 +434,7 @@ bool GridFile::readgrid_3dvar_fft(Mesh *m, const string &name,
       int yind = yread + jy; // Global location to read from
 
       file->setGlobalOrigin(jx + m->OffsetX, yind);
-      if (!file->read(zdata, name, 1, 1, size[2])) {
+      if (!file->read(std::begin(zdata), name, 1, 1, size[2])) {
         return 1;
       }
 
@@ -451,15 +452,11 @@ bool GridFile::readgrid_3dvar_fft(Mesh *m, const string &name,
           fdata[i] = 0.0;
         }
       }
-      irfft(fdata, ncz, &var(jx,ydest+jy,0));
+      irfft(std::begin(fdata), ncz, &var(jx, ydest + jy, 0));
     }
   }
 
   file->setGlobalOrigin();
-
-  // free data
-  delete[] zdata;
-  delete[] fdata;
   
   return true;
 }

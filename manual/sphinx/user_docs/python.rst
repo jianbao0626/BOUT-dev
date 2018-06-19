@@ -1,5 +1,7 @@
-Python routines (alphabetical)
-==============================
+.. _sec-python-routines-list:
+
+Python routines
+===============
 
 boututils
 ---------
@@ -31,6 +33,10 @@ boututils
    ``warnings`` module, so printing the warnings can be controlled using
    ``warnings.simplefilter()`` or ``warnings.filterwarnings()``.
 
+.. automodule:: boututils
+   :members:
+   :undoc-members:
+
 boutdata
 --------
 
@@ -43,12 +49,16 @@ boutdata
            from boutdata.collect import collect
 
            t = collect("t_array")  # Collect the time values
-         
+
 
 -  ``pol_slice()`` takes a 3 or 4-D data set for a toroidal equilibrium,
    and calculates a slice through it at fixed toroidal angle.
 
 -  ``gen_surface()`` is a generator for iterating over flux surfaces
+
+.. automodule:: boutdata
+   :members:
+   :undoc-members:
 
 .. _sec-bout_runners:
 

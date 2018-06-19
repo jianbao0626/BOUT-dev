@@ -216,7 +216,9 @@ class BoutMesh : public Mesh {
   void set_connection(int ypos1, int ypos2, int xge, int xlt, bool ts = false);
   void add_target(int ypos, int xge, int xlt);
   void topology();
-
+  
+  void addBoundaryRegions(); ///< Adds 2D and 3D regions for boundaries
+  
   vector<BoundaryRegion*> boundary; // Vector of boundary regions
   vector<BoundaryRegionPar*> par_boundary; // Vector of parallel boundary regions
 
@@ -233,8 +235,8 @@ class BoutMesh : public Mesh {
     /// Array of send requests (for non-blocking send). One for each possible neighbour; one each way in X, two each way in Y
     MPI_Request sendreq[6];
     int xbufflen, ybufflen;  ///< Length of the buffers used to send/receive (in BoutReals)
-    BoutReal *umsg_sendbuff, *dmsg_sendbuff, *imsg_sendbuff, *omsg_sendbuff; ///< Sending buffers
-    BoutReal *umsg_recvbuff, *dmsg_recvbuff, *imsg_recvbuff, *omsg_recvbuff; ///< Receiving buffers
+    Array<BoutReal> umsg_sendbuff, dmsg_sendbuff, imsg_sendbuff, omsg_sendbuff; ///< Sending buffers
+    Array<BoutReal> umsg_recvbuff, dmsg_recvbuff, imsg_recvbuff, omsg_recvbuff; ///< Receiving buffers
     bool in_progress; ///< Is the communication still going?
 
     /// List of fields being communicated
