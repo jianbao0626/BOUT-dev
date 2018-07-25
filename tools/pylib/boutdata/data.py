@@ -10,6 +10,7 @@ import numpy
 import re
 
 from boutdata.collect import collect, create_cache
+from boutdata.shiftz import shiftz
 from boututils.boutwarnings import alwayswarn
 from boututils.datafile import DataFile
 
@@ -497,6 +498,13 @@ class BoutOutputs(object):
     **kwargs
         keyword arguments that are passed through to _caching_collect()
 
+    Attributes
+    ----------
+    attributes : dict
+                 dictionary of attributes from the first DataFile
+    evolvingVariables : list
+                        list of time-evolving variables
+
     Examples
     --------
 
@@ -515,7 +523,6 @@ class BoutOutputs(object):
     BoutArray([[[[...]]]])
 
     >>> d = BoutOutputs(".", prefix="BOUT.dmp", caching=True) # Turn on caching
-
     """
 
     def __init__(self, path=".", prefix="BOUT.dmp", suffix=None, caching=False,
@@ -554,9 +561,14 @@ class BoutOutputs(object):
         # Available variables
         self.varNames = []
         self.dimensions = {}
-        self.evolvingVariableNames = []
+        self.evolvingVariables = []
+
+        # used for getShifted()/getUnshifted() methods, calculated from
+        # self['zShift'] when first needed
+        self._shiftAngle = None
 
         with DataFile(latest_file) as f:
+            self.attributes = f.attributes()
             npes = f.read("NXPE")*f.read("NYPE")
             if len(self._file_list) != npes:
                 alwayswarn("Too many data files, reading most recent ones")
@@ -574,7 +586,7 @@ class BoutOutputs(object):
                 dimensions = f.dimensions(name)
                 self.dimensions[name] = dimensions
                 if name != "t_array" and "t" in dimensions:
-                    self.evolvingVariableNames.append(name)
+                    self.evolvingVariables.append(name)
 
         # Private variables
         if self._caching:
@@ -599,11 +611,53 @@ class BoutOutputs(object):
         """
         return self.varNames
 
-    def evolvingVariables(self):
-        """Return a list of names of time-evolving variables
 
+    @property
+    def shiftAngle(self):
         """
-        return self.evolvingVariableNames
+        The shift angle, calculated from zShift the first time it is used
+        """
+        if self._shiftAngle is None:
+            nz = self["MZ"]
+            zlength = self["dz"]*nz
+            self._shiftAngle = 2.*numpy.pi*self["zShift"]/zlength
+        return self._shiftAngle
+
+    def getShifted(self, name):
+        """
+        Return a variable shifted by zShift: if BOUT++ output is in
+        'unshifted', i.e. toroidal, coordinates, this function returns a field
+        in field-aligned coordinates. Does nothing if the variable is already
+        field aligned.
+
+        Note: shiftz(x, zshift) takes field-aligned 'x' to 'x' in orthogonal
+        coordinates. Therefore need to use -self.shiftAngle here
+        """
+        coords = self[name].attributes["coordinate_system"]
+        if coords == "fieldaligned":
+            return self[name]
+        elif coords == "orthogonal":
+            return shiftz(self[name], -self.shiftAngle)
+        else:
+            raise ValueError("Unrecognized coordinate system: "+coords)
+
+    def getUnshifted(self, name):
+        """
+        Return a variable un-shifted by zShift: if BOUT++ output is in
+        'shifted', i.e. field-aligned, coordinates, this function returns a
+        field in toroidal coordinates. Does nothing if the variable is already
+        in toroidal coordinates.
+
+        Note: shiftz(x, zshift) takes field-aligned 'x' to 'x' in orthogonal
+        coordinates. Therefore need to use +self.shiftAngle here
+        """
+        coords = self[name].attributes["coordinate_system"]
+        if coords == "fieldaligned":
+            return shiftz(self[name], self.shiftAngle)
+        elif coords == "orthogonal":
+            return self[name]
+        else:
+            raise ValueError("Unrecognized coordinate system: "+coords)
 
     def redistribute(self, npes, nxpe=None, mxg=2, myg=2, include_restarts=True):
         """Create a new set of dump files for npes processors.
