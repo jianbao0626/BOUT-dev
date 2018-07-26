@@ -246,6 +246,10 @@ Options* FieldFactory::findOption(Options *opt, const string &name, string &val)
       if (result == nullptr)
         throw ParseException("Cannot find variable '%s'", name.c_str());
     }
+    // Needs access to private interface
+    if ( result->options[name].source == "default" ) {
+      throw ParseException("Variable '%s' found, but only defined as 'default'", name.c_str());
+    }
     result->get(name, val, "");
 
   }else {

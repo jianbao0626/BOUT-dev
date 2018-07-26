@@ -46,6 +46,8 @@ class Options;
 #include <string>
 using std::string;
 
+class FieldFactory;
+
 /// Class to represent hierarchy of options
 /*!
  *
@@ -191,7 +193,8 @@ public:
   /// to allow iteration over the tree
   const std::map<string, OptionValue>& values() const {return options;}
   const std::map<string, Options*>& subsections() const {return sections;}
-
+  
+  friend FieldFactory;
  private:
   static Options *root; ///< Only instance of the root section
 
