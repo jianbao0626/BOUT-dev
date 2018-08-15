@@ -854,7 +854,7 @@ BoutReal min(const Field3D &f, bool allpe, REGION rgn) {
   BoutReal result = f[f.region(rgn).begin()];
   
   //for(const auto& i: f.region(rgn))
-  BLOCK_REGION_LOOP( f.getMesh()->getRegion3D(rgn), i,
+  BLOCK_REGION_LOOP_SERIAL( f.getMesh()->getRegion3D(rgn), i,
     if(f[i] < result)
       result = f[i];
   );
@@ -877,7 +877,7 @@ BoutReal max(const Field3D &f, bool allpe, REGION rgn) {
   BoutReal result = f[f.region(rgn).begin()];
   
   //for(const auto& i: f.region(rgn))
-  BLOCK_REGION_LOOP( f.getMesh()->getRegion3D(rgn), i,
+  BLOCK_REGION_LOOP_SERIAL( f.getMesh()->getRegion3D(rgn), i,
     if(f[i] > result)
       result = f[i];
   );
