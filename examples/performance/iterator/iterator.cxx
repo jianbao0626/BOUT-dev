@@ -15,6 +15,17 @@
 #include "bout/openmpwrap.hxx"
 #include "bout/region.hxx"
 
+#define NEW_BLOCK_REGION_LOOP_SERIAL(index, region)                                      \
+  for (auto block = region.getBlocks().cbegin(), end = region.getBlocks().cend();        \
+       block < end; ++block)                                                             \
+    for (auto index = block->first; index < block->second; ++index)
+
+#define NEW_BLOCK_REGION_LOOP(index, region)                                             \
+  BOUT_OMP(parallel for)                                                \
+  for (auto block = region.getBlocks().cbegin(); block < region.getBlocks().cend();      \
+       ++block)                                                                          \
+    for (auto index = block->first; index < block->second; ++index)
+
 typedef std::chrono::time_point<std::chrono::steady_clock> SteadyClock;
 typedef std::chrono::duration<double> Duration;
 using namespace std::chrono;
@@ -170,12 +181,25 @@ int main(int argc, char **argv) {
 			       result[i] = a[i] + b[i];
 			       );
 		      );
+   // Region macro
+  ITERATOR_TEST_BLOCK(
+    "New Region (serial)",
+    NEW_BLOCK_REGION_LOOP_SERIAL(i, mesh->getRegion("RGN_ALL")) {
+      result[i] = a[i] + b[i];
+    }
+    );
 #ifdef _OPENMP
   ITERATOR_TEST_BLOCK("Region (omp)",
 		      BLOCK_REGION_LOOP(mesh->getRegion("RGN_ALL"), i,
 					result[i] = a[i] + b[i];
 					);
 		      );
+  ITERATOR_TEST_BLOCK(
+    "New Region (omp)",
+    NEW_BLOCK_REGION_LOOP(i, mesh->getRegion("RGN_ALL")) {
+      result[i] = a[i] + b[i];
+    }
+    );
 #endif
   
   if(profileMode){
@@ -189,9 +213,9 @@ int main(int argc, char **argv) {
       time_output << "\n------------------------------------------------\n";
       time_output << "Case legend";
       time_output <<"\n------------------------------------------------\n";
-      
-      for (int i = 0 ; i < names.size(); i++){	
-	time_output << std::setw(width) << "Case " << i << ".\t" << names[i] << "\n";
+
+      for (int i = 0 ; i < names.size(); i++){
+    time_output << std::setw(width) << "Case " << i << ".\t" << names[i] << "\n";
       }
       time_output << "\n";
       time_output << std::setw(width) << "Nprocs" << "\t";
@@ -201,8 +225,8 @@ int main(int argc, char **argv) {
       time_output << std::setw(width) << "Nx (global)" << "\t";
       time_output << std::setw(width) << "Ny (global)" << "\t";
       time_output << std::setw(width) << "Nz (global)" << "\t";
-      for (int i = 0 ; i < names.size(); i++){	
-	time_output << std::setw(width) << "Case " << i << "\t";
+      for (int i = 0 ; i < names.size(); i++){
+    time_output << std::setw(width) << "Case " << i << "\t";
       }
       time_output << "\n";
     }
@@ -214,7 +238,7 @@ int main(int argc, char **argv) {
     time_output << std::setw(width) << mesh->GlobalNx << "\t";
     time_output << std::setw(width) << mesh->GlobalNy << "\t";
     time_output << std::setw(width) << mesh->GlobalNz << "\t";
-    for (int i = 0 ; i < names.size(); i++){	
+    for (int i = 0 ; i < names.size(); i++){
       time_output << std::setw(width) << times[i].count()/NUM_LOOPS << "\t";
     }
     time_output << "\n";
