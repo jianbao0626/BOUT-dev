@@ -383,8 +383,8 @@ public:
   typename RegionIndices::iterator end() { return std::end(indices); };
   typename RegionIndices::const_iterator cend() const { return indices.cend(); };
 
-  ContiguousBlocks getBlocks() const { SCOREP0(); return blocks; };
-  RegionIndices getIndices() const { return indices; };
+  const ContiguousBlocks& getBlocks() const { SCOREP0(); return blocks; };
+  const RegionIndices& getIndices() const { return indices; };
 
   /// Set the indices and ensure blocks updated
   void setIndices (RegionIndices &indicesIn, int maxregionblocksize = MAXREGIONBLOCKSIZE) {
