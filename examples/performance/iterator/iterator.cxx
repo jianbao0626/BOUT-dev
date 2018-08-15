@@ -56,9 +56,9 @@ int main(int argc, char **argv) {
 
   ConditionalOutput time_output(Output::getInstance());
   time_output.enable(true);
-  
-  Field3D a = 1.0;
-  Field3D b = 2.0;
+
+  const Field3D a = 1.0;
+  const Field3D b = 2.0;
 
   Field3D result;
   result.allocate();
