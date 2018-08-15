@@ -99,7 +99,7 @@
 #define BLOCK_REGION_LOOP_PARALLEL_SECTION(region, index, ...)                           \
   {                                                                                      \
     const auto & blocks = region.getBlocks();                                            \
-    BOUT_OMP(for schedule(guided))                                                       \
+    BOUT_OMP(for schedule(guided) nowait)                                                       \
     _Pragma("ivdep vector always")                                                       \
     for (auto block = blocks.cbegin(); block < blocks.cend(); ++block) {                 \
       _Pragma("ivdep vector always")                                                     \
