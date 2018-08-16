@@ -37,12 +37,16 @@
 /// Used for calculating derivatives
 class stencil {
  public:
-  int jx, jy, jz; ///< central location
+  BoutReal mm, pp, m, c, p; ///< stencil 2 each side of the centre
+   int jx, jy, jz; ///< central location
   
-  BoutReal c, p, m, pp, mm; ///< stencil 2 each side of the centre
+  // //  BoutReal c, p, m, pp, mm; ///< stencil 2 each side of the centre
+
   
   /// constructor
-  stencil();
+  //  stencil(){  p = c = m = pp = mm = 0.;};
+  stencil(){  mm = pp = m = c = p = 0.;};
+  //  stencil() :mm(0.), pp(0.), m(0.), c(0.), p(0.){};
   /// Constructor like pre r115 upwind methods (debugging)
   stencil(BoutReal fc);
   /// Constructor like pre r115 derivative methods

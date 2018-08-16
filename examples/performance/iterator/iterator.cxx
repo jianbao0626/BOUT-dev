@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
   result.allocate();
 
   //Some small setup for C loop case
-  BoutReal *ad = &a(0,0,0);
-  BoutReal *bd = &b(0,0,0);
+  const BoutReal *ad = &a(0,0,0);
+  const BoutReal *bd = &b(0,0,0);
   BoutReal *rd = &result(0,0,0);
   
   const int len = mesh->LocalNx*mesh->LocalNy*mesh->LocalNz;
