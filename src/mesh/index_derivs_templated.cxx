@@ -904,11 +904,11 @@ const Field2D Mesh::indexDDX(const Field2D &f, CELL_LOC outloc,
   ASSERT1(outloc == CELL_DEFAULT || outloc == f.getLocation());
   ASSERT1(method == DIFF_DEFAULT);
   switch(method) {
-  case(DIFF_C2) : return applyXdiff<DDX_C2>(f, diffloc, region)
-  case(DIFF_W2) : return applyXdiff<DDX_CWENO2>(f, diffloc, region)
-  case(DIFF_W3) : return applyXdiff<DDX_CWENO3>(f, diffloc, region)
-  case(DIFF_C4) : return applyXdiff<DDX_C4>(f, diffloc, region)
-  case(DIFF_S2) : return applyXdiff<DDX_S2>(f, diffloc, region)
+  case(DIFF_C2) : return applyXdiff<DDX_C2>(f, outloc, region);
+  case(DIFF_W2) : return applyXdiff<DDX_CWENO2>(f, outloc, region);
+  case(DIFF_W3) : return applyXdiff<DDX_CWENO3>(f, outloc, region);
+  case(DIFF_C4) : return applyXdiff<DDX_C4>(f, outloc, region);
+  case(DIFF_S2) : return applyXdiff<DDX_S2>(f, outloc, region);
   default : throw BoutException("Invalid method encountered in indexDDX");
   }
 }
