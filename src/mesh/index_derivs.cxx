@@ -65,7 +65,9 @@
 
 #include <bout/mesh.hxx>
 
+
 #include "methods.hxx"
+
 /*******************************************************************************
  * Lookup tables of functions. Map between names, codes and functions
  *******************************************************************************/

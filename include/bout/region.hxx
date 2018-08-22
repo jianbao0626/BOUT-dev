@@ -117,6 +117,9 @@
     }                                                                                    \
   }
 
+
+enum class IND_TYPE { IND_3D = 0, IND_2D = 1};
+
 /// Indices base class for Fields -- Regions are dereferenced into these
 ///
 /// Provides methods for offsetting by fixed amounts in x, y, z, as
@@ -140,6 +143,7 @@
 ///     auto index = std::begin(region);
 ///
 ///     result = field[index->yp()] - field[index->ym()];
+template<IND_TYPE N>
 class SpecificInd {
 public:
   int ind = -1; //< 1D index into Field
@@ -147,50 +151,50 @@ private:
   int ny = -1, nz = -1; //< Sizes of y and z dimensions
 
 public:
-  SpecificInd() : ind(-1){};
-  SpecificInd(int i, int ny = -1, int nz = -1) : ind(i), ny(ny), nz(nz){};
+  SpecificInd<N>() : ind(-1){};
+  SpecificInd<N>(int i, int ny = -1, int nz = -1) : ind(i), ny(ny), nz(nz){};
 
   /// Pre-increment operator
-  SpecificInd &operator++() {
+  SpecificInd<N> &operator++() {
     ++ind;
     return *this;
   }
 
   /// Post-increment operator
-  SpecificInd operator++(int) {
-    SpecificInd original(*this);
+  SpecificInd<N> operator++(int) {
+    SpecificInd<N> original(*this);
     ++ind;
     return original;
   }
 
   /// Pre-decrement operator
-  SpecificInd &operator--() {
+  SpecificInd<N> &operator--() {
     --ind;
     return *this;
   }
 
   /// Post-decrement operator
-  SpecificInd operator--(int) {
-    SpecificInd original(*this);
+  SpecificInd<N> operator--(int) {
+    SpecificInd<N> original(*this);
     --ind;
     return original;
   }
 
   /// In-place addition
-  SpecificInd &operator+=(SpecificInd n) {
+  SpecificInd<N> &operator+=(SpecificInd<N> n) {
     ind += n.ind;
     return *this;
   }
 
   /// In-place subtraction
-  SpecificInd &operator-=(SpecificInd n) {
+  SpecificInd<N> &operator-=(SpecificInd<N> n) {
     ind -= n.ind;
     return *this;
   }
 
   /// Modulus operator
-  SpecificInd operator%(int n) {
-    SpecificInd new_ind{ind % n, ny, nz};
+  SpecificInd<N> operator%(int n) {
+    SpecificInd<N> new_ind(ind % n);
     return new_ind;
   }
 
@@ -199,11 +203,11 @@ public:
   int y() const { return (ind / nz) % ny; }
   int z() const { return (ind % nz); }
 
-  const inline SpecificInd xp(int dx = 1) const { return {ind + (dx * ny * nz), ny, nz}; }
+  const inline SpecificInd<N> xp(int dx = 1) const { return {ind + (dx * ny * nz), ny, nz}; }
   /// The index one point -1 in x
-  const inline SpecificInd xm(int dx = 1) const { return xp(-dx); }
+  const inline SpecificInd<N> xm(int dx = 1) const { return xp(-dx); }
   /// The index one point +1 in y
-  const inline SpecificInd yp(int dy = 1) const {
+  const inline SpecificInd<N> yp(int dy = 1) const {
 #if CHECK >= 4
     if (y() + dy < 0 or y() + dy >= ny) {
       throw BoutException("Offset in y (%d) would go out of bounds at %d", dy, ind);
@@ -213,105 +217,84 @@ public:
     return {ind + (dy * nz), ny, nz};
   }
   /// The index one point -1 in y
-  const inline SpecificInd ym(int dy = 1) const { return yp(-dy); }
+  const inline SpecificInd<N> ym(int dy = 1) const { return yp(-dy); }
   /// The index one point +1 in z. Wraps around zend to zstart
-  const inline SpecificInd zp(int dz = 1) const {
+  const inline SpecificInd<N> zp(int dz = 1) const {
     ASSERT3(dz > 0);
     ASSERT3(dz <= nz);
     return {(ind + dz) % nz < dz ? ind - nz + dz : ind + dz, ny, nz};
   }
   /// The index one point -1 in z. Wraps around zstart to zend
-  const inline SpecificInd zm(int dz = 1) const {
+  const inline SpecificInd<N> zm(int dz = 1) const {
     ASSERT3(dz > 0);
     ASSERT3(dz <= nz);
     return {(ind) % nz < dz ? ind + nz - dz : ind - dz, ny, nz};
   }
   // and for 2 cells
-  const inline SpecificInd xpp() const { return xp(2); }
-  const inline SpecificInd xmm() const { return xm(2); }
-  const inline SpecificInd ypp() const { return yp(2); }
-  const inline SpecificInd ymm() const { return ym(2); }
-  const inline SpecificInd zpp() const { return zp(2); }
-  const inline SpecificInd zmm() const { return zm(2); }
+  const inline SpecificInd<N> xpp() const { return xp(2); }
+  const inline SpecificInd<N> xmm() const { return xm(2); }
+  const inline SpecificInd<N> ypp() const { return yp(2); }
+  const inline SpecificInd<N> ymm() const { return ym(2); }
+  const inline SpecificInd<N> zpp() const { return zp(2); }
+  const inline SpecificInd<N> zmm() const { return zm(2); }
 
   /// Generic offset of \p index in multiple directions simultaneously
-  const inline SpecificInd offset(int dx, int dy, int dz) {
+  const inline SpecificInd<N> offset(int dx, int dy, int dz) {
     auto temp = (dz > 0) ? zp(dz) : zm(-dz);
     return temp.yp(dy).xp(dx);
   }
 };
 
 /// Relational operators
-inline bool operator==(const SpecificInd &lhs, const SpecificInd &rhs) {
+template<IND_TYPE N>
+inline bool operator==(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return lhs.ind == rhs.ind;
 }
-inline bool operator!=(const SpecificInd &lhs, const SpecificInd &rhs) {
+
+template<IND_TYPE N>
+inline bool operator!=(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return !operator==(lhs, rhs);
 }
-inline bool operator<(const SpecificInd &lhs, const SpecificInd &rhs) {
+
+template<IND_TYPE N>
+inline bool operator<(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return lhs.ind < rhs.ind;
 }
-inline bool operator>(const SpecificInd &lhs, const SpecificInd &rhs) {
+
+template<IND_TYPE N>
+inline bool operator>(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return operator<(rhs, lhs);
 }
-inline bool operator>=(const SpecificInd &lhs, const SpecificInd &rhs) {
+
+template<IND_TYPE N>
+inline bool operator>=(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return !operator<(lhs, rhs);
 }
-inline bool operator<=(const SpecificInd &lhs, const SpecificInd &rhs) {
+
+template<IND_TYPE N>
+inline bool operator<=(const SpecificInd<N> &lhs, const SpecificInd<N> &rhs) {
   return !operator>(lhs, rhs);
 }
 
-/// Index-type for `Field3D`s
-class Ind3D : public SpecificInd {
-public:
-  Ind3D() : SpecificInd(){};
-  Ind3D(int i, int ny=-1, int nz=-1) : SpecificInd(i, ny, nz){};
-  Ind3D(SpecificInd baseIn) : SpecificInd(baseIn){};
-
-  // Note operator= from base class is always hidden
-  // by implicit method so have to be explicit
-  Ind3D &operator=(int i) {
-    ind = i;
-    return *this;
-  }
-
-  Ind3D &operator=(SpecificInd i) {
-    ind = i.ind;
-    return *this;
-  }
-};
-
 /// Arithmetic operators with integers
-inline Ind3D operator+(Ind3D lhs, const Ind3D &rhs) { return lhs += rhs; }
-inline Ind3D operator+(Ind3D lhs, int n) { return lhs += n; }
-inline Ind3D operator+(int n, Ind3D rhs) { return rhs += n; }
-inline Ind3D operator-(Ind3D lhs, int n) { return lhs -= n; }
-inline Ind3D operator-(Ind3D lhs, const Ind3D &rhs) { return lhs -= rhs; }
+template<IND_TYPE N>
+inline SpecificInd<N> operator+(SpecificInd<N> lhs, const SpecificInd<N> &rhs) { return lhs += rhs; }
 
-/// Index-type for `Field2D`s
-class Ind2D : public SpecificInd {
-public:
-  Ind2D() : SpecificInd(){};
-  Ind2D(int i, int ny=-1, int nz=-1) : SpecificInd(i, ny, nz){};
-  Ind2D(SpecificInd baseIn) : SpecificInd(baseIn){};
+template<IND_TYPE N>
+inline SpecificInd<N> operator+(SpecificInd<N> lhs, int n) { return lhs += n; }
 
-  Ind2D &operator=(int i) {
-    ind = i;
-    return *this;
-  }
+template<IND_TYPE N>
+inline SpecificInd<N> operator+(int n, SpecificInd<N> rhs) { return rhs += n; }
 
-  Ind2D &operator=(SpecificInd i) {
-    ind = i.ind;
-    return *this;
-  }
-};
+template<IND_TYPE N>
+inline SpecificInd<N> operator-(SpecificInd<N> lhs, int n) { return lhs -= n; }
 
-/// Arithmetic operators with integers
-inline Ind2D operator+(Ind2D lhs, const Ind2D &rhs) { return lhs += rhs; }
-inline Ind2D operator+(Ind2D lhs, int n) { return lhs += n; }
-inline Ind2D operator+(int n, Ind2D rhs) { return rhs += n; }
-inline Ind2D operator-(Ind2D lhs, int n) { return lhs -= n; }
-inline Ind2D operator-(Ind2D lhs, const Ind2D &rhs) { return lhs -= rhs; }
+template<IND_TYPE N>
+inline SpecificInd<N> operator-(SpecificInd<N> lhs, const SpecificInd<N> &rhs) { return lhs -= rhs; }
+
+/// Define aliases for global indices in 3D and 2D 
+using Ind3D = SpecificInd<IND_TYPE::IND_3D>;
+using Ind2D = SpecificInd<IND_TYPE::IND_2D>;
 
 /// Structure to hold various derived "statistics" from a particular region
 struct RegionStats {
